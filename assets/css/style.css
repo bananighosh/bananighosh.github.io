@@ -104,3 +104,27 @@ mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; }
   .post-list li { grid-template-columns: 1fr; }
   .post-list time { order: -1; font-size: 12px; }
 }
+
+/* Long-form post components */
+.toc { background: var(--code-bg); border-radius: 8px; padding: 16px 20px; margin: 0 0 32px; font: 15px/1.6 var(--sans); }
+.toc p { margin: 0 0 8px; }
+.toc ul { margin: 0; padding-left: 18px; }
+.toc a { color: var(--fg); text-decoration: none; }
+.toc a:hover { color: var(--link); }
+
+.post-body figure { margin: 28px 0; }
+.post-body figure img { margin: 0 auto; background: #fff; border-radius: 6px; }
+.post-body figcaption { font: 14px/1.5 var(--sans); color: var(--muted); margin-top: 8px; text-align: center; }
+
+.callout { display: grid; grid-template-columns: 28px 1fr; column-gap: 10px; padding: 14px 18px; border-radius: 8px; margin: 28px 0; font-size: 16px; }
+.callout > * { grid-column: 2; margin: 0; }
+.callout > .callout-icon, .callout > p:first-child { grid-column: 1; grid-row: 1 / span 9; font-size: 18px; line-height: 1.6; }
+.callout-gray { background: var(--code-bg); }
+.callout-green { background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
+.callout-purple { background: color-mix(in srgb, #8250df 12%, var(--bg)); }
+
+.pullquote { border-left: 3px solid #8250df; padding: 2px 0 2px 18px; margin: 28px 0; font-size: 19px; }
+.pullquote p { margin: 0; }
+
+.post-body hr { border: 0; border-top: 1px solid var(--rule); margin: 48px 0; }
+.post-body td, .post-body th { vertical-align: top; min-width: 90px; }

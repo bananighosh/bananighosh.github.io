@@ -16,6 +16,7 @@ kramdown:
   input: GFM
   math_engine: mathjax
   syntax_highlighter: rouge
+  toc_levels: 2..2
 
 plugins:
   - jekyll-feed
