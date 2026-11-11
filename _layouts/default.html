@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  {% include head.html %}
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+      <nav>
+        <a href="{{ '/' | relative_url }}">Writing</a>
+        <a href="{{ '/about/' | relative_url }}">About</a>
+        <a href="{{ '/feed.xml' | relative_url }}">RSS</a>
+        <button class="theme-toggle" type="button" aria-label="Toggle theme" onclick="toggleTheme()">◐</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    {{ content }}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>© {{ 'now' | date: '%Y' }} {{ site.author }}</span>
+      <span class="links">
+        <a href="https://github.com/{{ site.github_username }}">GitHub</a>
+        {% if site.x_username != "" %}<a href="https://x.com/{{ site.x_username }}">X</a>{% endif %}
+        {% if site.linkedin_username != "" %}<a href="https://www.linkedin.com/in/{{ site.linkedin_username }}">LinkedIn</a>{% endif %}
+      </span>
+    </div>
+  </footer>
+
+  <script>
+    function toggleTheme() {
+      var root = document.documentElement;
+      var cur = root.getAttribute('data-theme') ||
+        (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      var next = cur === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch (e) {}
+    }
+  </script>
+</body>
+</html>

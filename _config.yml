@@ -1,0 +1,35 @@
+title: Banani Ghosh
+description: First-principles notes on GPU performance, LLM inference, and ML systems.
+author: Banani Ghosh
+url: "https://bananighosh.github.io"
+baseurl: ""
+
+github_username: bananighosh
+x_username: ""        # add your X handle without @
+linkedin_username: "" # add your LinkedIn slug
+
+permalink: /:year/:month/:title/
+timezone: America/Los_Angeles
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  math_engine: mathjax
+  syntax_highlighter: rouge
+
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+defaults:
+  - scope: { path: "", type: posts }
+    values:
+      layout: post
+      math: true
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - vendor
