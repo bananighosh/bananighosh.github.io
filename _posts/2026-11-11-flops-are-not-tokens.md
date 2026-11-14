@@ -65,7 +65,7 @@ This post walks that chain once, and at every link asks the same question of the
 
 ## 2. What is physically different inside the chips
 
-<b>Intuition.</b> A GPU is thousands of programmable workers sharing caches the hardware manages. An ASIC is a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
+A GPU is thousands of programmable workers sharing caches the hardware manages. An ASIC is a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
 
 <figure><img src="/assets/img/flops-are-not-tokens/gpu-vs-trainium3-hierarchy.png" alt="Both designs exist to keep data on chip. The GPU uses many small SRAMs and hardware schedulers; Trainium3 uses eight cores with 32 MiB of software-managed SBUF each, fed by explicit DMA that the compiler or an NKI kernel schedules." loading="lazy"><figcaption>Both designs exist to keep data on chip. The GPU uses many small SRAMs and hardware schedulers; Trainium3 uses eight cores with 32 MiB of software-managed SBUF each, fed by explicit DMA that the compiler or an NKI kernel schedules.</figcaption></figure>
 
@@ -129,7 +129,7 @@ Jalapeño makes the same argument from the other direction: less HBM than a B300
 
 ## 3. Prefill vs decode: why one request stresses hardware two ways
 
-<b>Intuition.</b> <b>Prefill</b> reads the whole prompt at once: lots of math, very parallel. <b>Decode</b> writes one token at a time: very little math per step, but every step re-reads all the weights and the whole KV cache.
+<b>Prefill</b> reads the whole prompt at once: lots of math, very parallel. <b>Decode</b> writes one token at a time: very little math per step, but every step re-reads all the weights and the whole KV cache.
 
 <figure><img src="/assets/img/flops-are-not-tokens/diagram2-prefill-vs-decode-v2.png" alt="diagram2 prefill vs decode v2" loading="lazy"></figure>
 
@@ -183,7 +183,7 @@ In principle, a large enough batch lifts decode past the ridge. In practice, the
 
 ## 4. The KV cache: the capacity wall
 
-<b>Intuition.</b> Every token a user has sent or received leaves a record in memory, the KV cache. Batching is a carpool: one read of the weights serves every passenger. But every passenger brings luggage, its own KV cache, and the luggage does not shrink when you add riders. Add enough riders and you are mostly moving luggage.
+Every token a user has sent or received leaves a record in memory, the KV cache. Batching is a carpool: one read of the weights serves every passenger. But every passenger brings luggage, its own KV cache, and the luggage does not shrink when you add riders. Add enough riders and you are mostly moving luggage.
 
 ```txt
 KV bytes per token = 2 (K and V) × 80 layers × 8 KV heads × 128 head dim × 1 byte (FP8)
@@ -235,7 +235,7 @@ FP8 stores each of Llama 3.3 70B's 70.55 billion parameters in 8 bits, one byte,
 
 ## 5. Energy: why inference ASICs exist at all
 
-<b>Intuition.</b> Math is cheap; moving data is expensive. In a data center with a fixed power budget, the chip that spends less energy moving bytes serves more tokens.
+Math is cheap; moving data is expensive. In a data center with a fixed power budget, the chip that spends less energy moving bytes serves more tokens.
 
 ```txt
 Energy per operation (45 nm process):
@@ -272,7 +272,7 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 
 ## 6. Tile quantization: the hidden tax on small batches
 
-<b>Intuition.</b> Matrix units work on fixed-size blocks. If the block has room for 128 rows and you bring 8, you still pay for 128 and get 8.
+Matrix units work on fixed-size blocks. If the block has room for 128 rows and you bring 8, you still pay for 128 and get 8.
 
 <figure><img src="/assets/img/flops-are-not-tokens/tile-quantization.png" alt="tile quantization" loading="lazy"></figure>
 
@@ -305,7 +305,7 @@ Prefill fills tiles easily (batch × prompt rows). Decode at small batch wastes 
 
 ## 7. Communication and scale-up
 
-<b>Intuition.</b> Large models span many chips, and chips must talk every layer. Every message pays a fixed startup latency before any bytes flow, so small messages are all latency and large messages are all bandwidth.
+Large models span many chips, and chips must talk every layer. Every message pays a fixed startup latency before any bytes flow, so small messages are all latency and large messages are all bandwidth.
 
 <figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-trn3.png" alt="scale hierarchy trn3" loading="lazy"></figure>
 
@@ -343,7 +343,7 @@ Interconnect bandwidth can matter more than another few hundred TFLOPS.
 
 ## 8. Software: the part that often decides real performance
 
-<b>Intuition.</b> A chip is only as fast as the code that runs on it. An excellent chip with a weak compiler loses to weaker hardware with a mature stack.
+A chip is only as fast as the code that runs on it. An excellent chip with a weak compiler loses to weaker hardware with a mature stack.
 
 <figure><img src="/assets/img/flops-are-not-tokens/software-stacks-trainium.png" alt="software stacks trainium" loading="lazy"></figure>
 
@@ -374,7 +374,7 @@ Between NVIDIA and AMD the names differ but the concepts map closely; porting us
 
 ## 9. Optimization is bottleneck removal
 
-<b>Intuition.</b> Every optimization removes one specific bottleneck. Diagnose first, then pick.
+Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 | Symptom | Bottleneck | First fixes |
 | --- | --- | --- |
@@ -443,7 +443,7 @@ Between NVIDIA and AMD the names differ but the concepts map closely; porting us
 
 ## 11. Prefill/decode disaggregation
 
-<b>Intuition.</b> Prefill wants compute. Decode wants bandwidth, KV capacity, and energy efficiency. Running both on the same chip makes each stall the other. Split them into two pools, and let each pool use the hardware that fits its job.
+Prefill wants compute. Decode wants bandwidth, KV capacity, and energy efficiency. Running both on the same chip makes each stall the other. Split them into two pools, and let each pool use the hardware that fits its job.
 
 <figure><img src="/assets/img/flops-are-not-tokens/diagram4-pd-disaggregation.svg" alt="diagram4 pd disaggregation" loading="lazy"></figure>
 
@@ -469,7 +469,7 @@ Total transfer is that figure times your request rate. Across <b>different</b> c
 
 ## 12. Capacity planning: sizing each pool from demand
 
-<b>Intuition.</b> Prefill and decode form a two-stage pipeline. The whole system runs at the speed of the slower stage, so adding prefill when decode is the bottleneck only adds cost. Size each pool from the traffic, not 50/50.
+Prefill and decode form a two-stage pipeline. The whole system runs at the speed of the slower stage, so adding prefill when decode is the bottleneck only adds cost. Size each pool from the traffic, not 50/50.
 
 ```txt
 Inputs
@@ -526,7 +526,7 @@ A chip is cheaper for decode than B300 if:
 
 ## 13. What a token costs on each chip
 
-<b>Intuition.</b> Vendors market peak FLOPS. Buyers pay per token. Most serving cost is decode, and decode is bound by HBM bandwidth, the scale-up fabric, and software, so <b>$/hour ÷ delivered tokens</b> decides fleet economics.
+Vendors market peak FLOPS. Buyers pay per token. Most serving cost is decode, and decode is bound by HBM bandwidth, the scale-up fabric, and software, so <b>$/hour ÷ delivered tokens</b> decides fleet economics.
 
 ### Rack-scale headline numbers (dense)
 
