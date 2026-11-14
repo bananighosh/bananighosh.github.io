@@ -69,7 +69,7 @@ A GPU is thousands of programmable workers sharing caches the hardware manages. 
 
 <figure><img src="/assets/img/flops-are-not-tokens/gpu-vs-trainium3-hierarchy.png" alt="Both designs exist to keep data on chip. The GPU uses many small SRAMs and hardware schedulers; Trainium3 uses eight cores with 32 MiB of software-managed SBUF each, fed by explicit DMA that the compiler or an NKI kernel schedules." loading="lazy"><figcaption>Both designs exist to keep data on chip. The GPU uses many small SRAMs and hardware schedulers; Trainium3 uses eight cores with 32 MiB of software-managed SBUF each, fed by explicit DMA that the compiler or an NKI kernel schedules.</figcaption></figure>
 
-<b>Systems view.</b> Both designs have software-managed SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is what sits behind it. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp. Trainium3 has no hardware cache: every byte moves by an explicit DMA transfer, scheduled ahead of time by the Neuron compiler or by an NKI kernel. When the work is predictable, that schedule wastes nothing; when shapes change, the schedule has to be rebuilt, which is why Trainium serving stacks compile per shape bucket. Trainium3 adds ISA support for dynamic shapes, which narrows that gap without removing it. This trade-off, explicit and efficient versus forgiving and flexible, is the core difference between a GPU and an AI ASIC.
+Both designs have software-managed SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is what sits behind it. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp. Trainium3 has no hardware cache: every byte moves by an explicit DMA transfer, scheduled ahead of time by the Neuron compiler or by an NKI kernel. When the work is predictable, that schedule wastes nothing; when shapes change, the schedule has to be rebuilt, which is why Trainium serving stacks compile per shape bucket. Trainium3 adds ISA support for dynamic shapes, which narrows that gap without removing it. This trade-off, explicit and efficient versus forgiving and flexible, is the core difference between a GPU and an AI ASIC.
 
 ### Across the chips: anatomy
 
@@ -320,7 +320,7 @@ Tensor-parallel decode, running example on 8 chips, 32 sequences, BF16 activatio
 
 More link bandwidth barely helps here; lower latency does. That is why serving stacks ship one-shot all-reduce kernels for small messages, and why vendors push reductions into the fabric.
 
-<b>Systems view.</b> Keep tensor parallelism inside the scale-up domain. Place expert parallelism where its all-to-all fits. Only pipeline and data parallelism should cross to scale-out networking.
+Keep tensor parallelism inside the scale-up domain. Place expert parallelism where its all-to-all fits. Only pipeline and data parallelism should cross to scale-out networking.
 
 ### Across the chips: scale-up
 
@@ -347,7 +347,7 @@ A chip is only as fast as the code that runs on it. An excellent chip with a wea
 
 <figure><img src="/assets/img/flops-are-not-tokens/software-stacks-trainium.png" alt="software stacks trainium" loading="lazy"></figure>
 
-<b>Systems view: where did my kernel go?</b> On a GPU, the engineer writes and tunes the fused kernel. On Trainium, the Neuron compiler fuses and schedules the graph by default, and performance-critical operators are written as NKI kernels:
+<b>Where did my kernel go?</b> On a GPU, the engineer writes and tunes the fused kernel. On Trainium, the Neuron compiler fuses and schedules the graph by default, and performance-critical operators are written as NKI kernels:
 
 ```txt
 Model graph → compiler IR → fusion → tiling → SRAM placement → engine scheduling → accelerator instructions
@@ -447,7 +447,7 @@ Prefill wants compute. Decode wants bandwidth, KV capacity, and energy efficienc
 
 <figure><img src="/assets/img/flops-are-not-tokens/diagram4-pd-disaggregation.svg" alt="diagram4 pd disaggregation" loading="lazy"></figure>
 
-<b>Systems view.</b> TTFT and TPOT get separate targets and separate tuning. And heterogeneous hardware becomes possible: high-FLOP GPUs for prefill, bandwidth-efficient chips for decode.
+TTFT and TPOT get separate targets and separate tuning. And heterogeneous hardware becomes possible: high-FLOP GPUs for prefill, bandwidth-efficient chips for decode.
 
 <b>The cost: moving the KV cache.</b>
 
