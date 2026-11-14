@@ -67,7 +67,7 @@ This post walks that chain once, and at every link asks the same question of the
 
 <b>Intuition.</b> A GPU is thousands of programmable workers sharing caches the hardware manages. An ASIC is a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
 
-<figure><img src="/assets/img/flops-are-not-tokens/gpu-vs-trainium3-hierarchy.svg" alt="Both designs exist to keep data on chip. The GPU uses many small SRAMs and hardware schedulers; Trainium3 uses eight cores with 32 MiB of software-managed SBUF each, fed by explicit DMA that the compiler or an NKI kernel schedules." loading="lazy"><figcaption>Both designs exist to keep data on chip. The GPU uses many small SRAMs and hardware schedulers; Trainium3 uses eight cores with 32 MiB of software-managed SBUF each, fed by explicit DMA that the compiler or an NKI kernel schedules.</figcaption></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/gpu-vs-trainium3-hierarchy.png" alt="Both designs exist to keep data on chip. The GPU uses many small SRAMs and hardware schedulers; Trainium3 uses eight cores with 32 MiB of software-managed SBUF each, fed by explicit DMA that the compiler or an NKI kernel schedules." loading="lazy"><figcaption>Both designs exist to keep data on chip. The GPU uses many small SRAMs and hardware schedulers; Trainium3 uses eight cores with 32 MiB of software-managed SBUF each, fed by explicit DMA that the compiler or an NKI kernel schedules.</figcaption></figure>
 
 <b>Systems view.</b> Both designs have software-managed SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is what sits behind it. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp. Trainium3 has no hardware cache: every byte moves by an explicit DMA transfer, scheduled ahead of time by the Neuron compiler or by an NKI kernel. When the work is predictable, that schedule wastes nothing; when shapes change, the schedule has to be rebuilt, which is why Trainium serving stacks compile per shape bucket. Trainium3 adds ISA support for dynamic shapes, which narrows that gap without removing it. This trade-off, explicit and efficient versus forgiving and flexible, is the core difference between a GPU and an AI ASIC.
 
@@ -131,7 +131,7 @@ Jalapeño makes the same argument from the other direction: less HBM than a B300
 
 <b>Intuition.</b> <b>Prefill</b> reads the whole prompt at once: lots of math, very parallel. <b>Decode</b> writes one token at a time: very little math per step, but every step re-reads all the weights and the whole KV cache.
 
-<figure><img src="/assets/img/flops-are-not-tokens/diagram2-prefill-vs-decode-v2.svg" alt="diagram2 prefill vs decode v2" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/diagram2-prefill-vs-decode-v2.png" alt="diagram2 prefill vs decode v2" loading="lazy"></figure>
 
 <b>Deep dive: tensor shapes.</b>
 
@@ -150,23 +150,23 @@ Changing <b>S to 1</b> is the whole story: the same weight matrix, multiplied by
 
 For FP8 decode, arithmetic intensity is roughly <b>2 × batch</b> FLOPs per byte (each weight byte does one multiply-add per sequence in the batch). Prefill arithmetic intensity is roughly 2 × batch × prompt length, far above any ridge.
 
-<figure><img src="/assets/img/flops-are-not-tokens/roofline-per-chip.svg" alt="Roofline for every accelerator in this post, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound on every chip." loading="lazy"><figcaption>Roofline for every accelerator in this post, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound on every chip.</figcaption></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/roofline-per-chip-llama33.svg" alt="Roofline for every accelerator in this post, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound on every chip." loading="lazy"><figcaption>Roofline for every accelerator in this post, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound on every chip.</figcaption></figure>
 
 <b>Latency is two numbers, throughput a third.</b> <b>TTFT</b> (time to first token) is driven by prefill plus queueing. <b>TPOT</b> (time per output token) is driven by decode. <b>Throughput</b>, in output tokens or requests completed per second, is measured at a given concurrency: more concurrent requests raise throughput until TTFT or TPOT misses its target. A chip can be great at one and mediocre at another, which is the root reason for prefill/decode disaggregation (Section 11).
 
 ### Across the chips: the running example at batch 1
 
-<b>The running example.</b> Every number from here on uses Meta Llama 3.3 70B (80 layers, 8 KV heads, head dim 128, about 70.6B parameters), so about 70 GB of FP8 weights and 160 KiB of FP8 KV cache per token, at the 8K-in / 1K-out shape SemiAnalysis InferenceX benchmarks. AWS Trainium figures are for Trainium3 and the Trn3 UltraServer.
+<b>The running example.</b> Every number from here on uses Meta Llama 3.3 70B (80 layers, 8 KV heads, head dim 128, 70.55B parameters), so 70.55 GB of FP8 weights and 160 KiB of FP8 KV cache per token, at the 8K-in / 1K-out shape SemiAnalysis InferenceX benchmarks. AWS Trainium figures are for Trainium3 and the Trn3 UltraServer.
 
-Minimum time per token = 70 GB of weights ÷ HBM bandwidth. No kernel can beat it.
+Minimum time per token = 70.55 GB of weights ÷ HBM bandwidth. No kernel can beat it.
 
 |  | NVIDIA B300 | AMD MI355X | NVIDIA Rubin | AMD MI455X | AWS Trainium3 | OpenAI Jalapeño |
 | --- | --- | --- | --- | --- | --- | --- |
 | HBM bandwidth | 8 TB/s | 8 TB/s | 19.2 TB/s | 23.3 TB/s | 4.9 TB/s | 15.4 TB/s |
-| Minimum time per token, one chip | 8.75 ms | 8.75 ms | 3.6 ms | 3.0 ms | 14.3 ms | 4.5 ms |
-| Max tokens/s for one user | 114 | 114 | 274 | 333 | 70 | 220 |
-| Ridge point | ≈ 625 FLOP/B | ≈ 625 FLOP/B | ≈ 910 FLOP/B | ≈ 860 FLOP/B | ≈ 515 FLOP/B | ≈ 870 FLOP/B (MXFP4) |
-| Batch at which decode becomes compute-bound | ≈ 312 | ≈ 312 | ≈ 455 | ≈ 430 | ≈ 257 | ≈ 218 (FP4 weights) |
+| Minimum time per token, one chip | 8.82 ms | 8.82 ms | 3.67 ms | 3.03 ms | 14.4 ms | 4.58 ms |
+| Max tokens/s for one user | 113 | 113 | 272 | 330 | 69 | 218 |
+| Ridge point | 625 FLOP/B | 625 FLOP/B | 911 FLOP/B | 858 FLOP/B | 514 FLOP/B | 870 FLOP/B (MXFP4) |
+| Batch at which decode becomes compute-bound | 313 | 313 | 456 | 429 | 257 | 218 (FP4 weights) |
 
 In principle, a large enough batch lifts decode past the ridge. In practice, the KV cache stops every chip short of it, as the next section shows.
 
@@ -189,7 +189,7 @@ In principle, a large enough batch lifts decode past the ridge. In practice, the
 KV bytes per token = 2 (K and V) × 80 layers × 8 KV heads × 128 head dim × 1 byte (FP8)
                    = 163,840 bytes = 160 KiB per token
 4K-token sequence   → ≈ 0.67 GB
-32K-token sequence  → ≈ 5.4 GB
+32K-token sequence  → ≈ 5.37 GB
 128K-token sequence → ≈ 21.5 GB
 ```
 
@@ -202,25 +202,25 @@ B → ∞:        ≈  (2P + attention FLOPs)  /  KV_bytes_per_seq
 
 | Context | KV per sequence | Max decode arithmetic intensity at any batch |
 | --- | --- | --- |
-| 8K | 1.34 GB | ≈ 120 FLOP/B |
-| 32K | 5.4 GB | ≈ 42 FLOP/B |
-| 128K | 21.5 GB | ≈ 22 FLOP/B |
+| 8K | 1.34 GB | ≈ 121 FLOP/B |
+| 32K | 5.37 GB | ≈ 42 FLOP/B |
+| 128K | 21.5 GB | ≈ 22.6 FLOP/B |
 | Limit (attention only, GQA-8, FP8 KV) |  | 16 FLOP/B |
 
-Every value sits below every ridge point in Section 3 (515 to 910 FLOP/B). <b>At 8K context and beyond, this model's decode is memory-bound on every chip in this post, at any batch size.</b>
+Every value sits below every ridge point in Section 3 (514 to 911 FLOP/B). <b>At 8K context and beyond, this model's decode is memory-bound on every chip in this post, at any batch size.</b>
 
 ### Across the chips: how many conversations fit
 
-FP8 stores each of Llama 3.3 70B's 70.6 billion parameters in 8 bits, one byte, so the weights take about 70 GB; whatever HBM is left holds the KV cache.
+FP8 stores each of Llama 3.3 70B's 70.55 billion parameters in 8 bits, one byte, so the weights take 70.55 GB; whatever HBM is left holds the KV cache.
 
 |  | NVIDIA B300 | AMD MI355X | NVIDIA Rubin | AMD MI455X | AWS Trainium3 | OpenAI Jalapeño |
 | --- | --- | --- | --- | --- | --- | --- |
-| HBM | 288 GB | 288 GB | 288 GB | 432 GB | 144 GB | 216 GiB (≈ 232 GB) |
-| Free for KV | ≈ 218 GB | ≈ 218 GB | ≈ 218 GB | ≈ 362 GB | ≈ 74 GB | ≈ 162 GB |
-| 4K-token sequences that fit | ≈ 325 | ≈ 325 | ≈ 325 | ≈ 539 | ≈ 110 | ≈ 241 |
-| 32K-token sequences that fit | ≈ 40 | ≈ 40 | ≈ 40 | ≈ 67 | ≈ 13 | ≈ 30 |
-| Arithmetic intensity at the 4K max batch | ≈ 170 FLOP/B | ≈ 170 FLOP/B | ≈ 170 FLOP/B | ≈ 188 FLOP/B | ≈ 115 FLOP/B | ≈ 157 FLOP/B |
-| Share of the chip ridge point | 27% | 27% | 19% | 22% | 22% | under 20% |
+| HBM | 288 GB | 288 GB | 288 GB | 432 GB | 144 GB | 216 GiB (231.9 GB) |
+| Free for KV | 217.4 GB | 217.4 GB | 217.4 GB | 361.4 GB | 73.4 GB | 161.4 GB |
+| 4K-token sequences that fit | 324 | 324 | 324 | 538 | 109 | 240 |
+| 32K-token sequences that fit | 40 | 40 | 40 | 67 | 13 | 30 |
+| Arithmetic intensity at the 4K max batch | 171 FLOP/B | 171 FLOP/B | 171 FLOP/B | 189 FLOP/B | 115 FLOP/B | 157 FLOP/B |
+| Share of the chip ridge point | 27% | 27% | 19% | 22% | 22% | 18% |
 
 <b>The key insight.</b> Even with HBM packed full of conversations, every chip runs decode at under 30% of its ridge point. KV traffic grows with every sequence you add. That is why, for this model, memory bandwidth, HBM capacity, and KV cache design set decode speed, while extra peak FLOPS barely move it. Three things help: <b>more bandwidth per dollar or per watt </b>(the approach the Trn3 UltraServer and Jalapeño take),<b> more HBM capacity, and a different attention design such as MLA or KV quantization.</b>
 
@@ -242,9 +242,9 @@ Energy per operation (45 nm process):
   32-bit read from off-chip DRAM  ≈ 640 pJ
   32-bit floating-point multiply  ≈ 3.7 pJ      → moving the data costs ≈ 170x the math
 
-Bytes read per decode token (70 GB of FP8 weights):
-  batch 1:   70 GB per token, ≈ 2 FLOPs per byte
-  batch 64:  70 GB ÷ 64 ≈ 1.1 GB per token
+Bytes read per decode token (70.55 GB of FP8 weights):
+  batch 1:   70.55 GB per token, ≈ 2 FLOPs per byte
+  batch 64:  70.55 GB ÷ 64 ≈ 1.10 GB per token
 ```
 
 At batch 1, decode does about two FLOPs for every byte it pulls from HBM, so almost all of its energy goes to moving weights. Batching divides the weight bytes per token, which makes <b>batching an energy optimization, not only a throughput one</b>.
@@ -272,11 +272,11 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 
 ## 6. Tile quantization: the hidden tax on small batches
 
-<b>Intuition.</b> Matrix units work on fixed-size blocks. If the block has room for 128 rows and you bring 8, you pay for 128 and get 8.
+<b>Intuition.</b> Matrix units work on fixed-size blocks. If the block has room for 128 rows and you bring 8, you still pay for 128 and get 8.
 
-<figure><img src="/assets/img/flops-are-not-tokens/tile-quantization.svg" alt="tile quantization" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/tile-quantization.png" alt="tile quantization" loading="lazy"></figure>
 
-<figure><img src="/assets/img/flops-are-not-tokens/d4_tile_quantization.svg" alt="Tile quantization: decode batch 8 on a 128-row tile does 6% useful work; batch 129 drops back to 50% because one extra row costs a whole tile." loading="lazy"><figcaption>Tile quantization: decode batch 8 on a 128-row tile does 6% useful work; batch 129 drops back to 50% because one extra row costs a whole tile.</figcaption></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/d4_tile_quantization.png" alt="Tile quantization: decode batch 8 on a 128-row tile does 6% useful work; batch 129 drops back to 50% because one extra row costs a whole tile." loading="lazy"><figcaption>Tile quantization: decode batch 8 on a 128-row tile does 6% useful work; batch 129 drops back to 50% because one extra row costs a whole tile.</figcaption></figure>
 
 ```txt
 Useful fraction = rows ÷ (ceil(rows ÷ tile) × tile)
@@ -307,7 +307,7 @@ Prefill fills tiles easily (batch × prompt rows). Decode at small batch wastes 
 
 <b>Intuition.</b> Large models span many chips, and chips must talk every layer. Every message pays a fixed startup latency before any bytes flow, so small messages are all latency and large messages are all bandwidth.
 
-<figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-trn3.svg" alt="scale hierarchy trn3" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-trn3.png" alt="scale hierarchy trn3" loading="lazy"></figure>
 
 ```txt
 Message time = α (startup latency) + size ÷ β (bandwidth)
@@ -345,7 +345,7 @@ Interconnect bandwidth can matter more than another few hundred TFLOPS.
 
 <b>Intuition.</b> A chip is only as fast as the code that runs on it. An excellent chip with a weak compiler loses to weaker hardware with a mature stack.
 
-<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-trainium.svg" alt="software stacks trainium" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-trainium.png" alt="software stacks trainium" loading="lazy"></figure>
 
 <b>Systems view: where did my kernel go?</b> On a GPU, the engineer writes and tunes the fused kernel. On Trainium, the Neuron compiler fuses and schedules the graph by default, and performance-critical operators are written as NKI kernels:
 
@@ -420,10 +420,6 @@ Between NVIDIA and AMD the names differ but the concepts map closely; porting us
 
 <figure><img src="/assets/img/flops-are-not-tokens/moe-layer-trn3.svg" alt="moe layer trn3" loading="lazy"></figure>
 
-<figure><img src="/assets/img/flops-are-not-tokens/moe-layer.svg" alt="moe layer" loading="lazy"></figure>
-
-<figure><img src="/assets/img/flops-are-not-tokens/diagram-moe-layer.svg" alt="diagram moe layer" loading="lazy"></figure>
-
 <b>E. Speculative decoding.</b> Verifying K draft tokens at once turns 1-row decode into K-row decode: higher arithmetic intensity, fuller tiles. Gains shrink at high batch because batching already used the spare compute.
 
 ### Across the chips: who fits which scenario
@@ -431,7 +427,7 @@ Between NVIDIA and AMD the names differ but the concepts map closely; porting us
 | Scenario | NVIDIA | AMD | AWS Trainium | OpenAI Jalapeño |
 | --- | --- | --- | --- | --- |
 | A. Prefill | Strong; B300 NVFP4 at 3x FP8 | MI455X: highest FP8 per chip | Lower per chip, no FP4 speedup; judge per dollar | 13.4 PF MXFP4 |
-| B. Low-latency decode | Rubin: 3.6 ms minimum per token | MI455X: 3.0 ms | 14.3 ms per chip; needs tensor parallel across chips | 4.5 ms; about 700 tok/s/user at minimum time between tokens on DeepSeek R1 in OpenAI's runs |
+| B. Low-latency decode | Rubin: 3.67 ms minimum per token | MI455X: 3.03 ms | 14.4 ms per chip; needs tensor parallel across chips | 4.58 ms; about 700 tok/s/user at minimum time between tokens on DeepSeek R1 in OpenAI's runs |
 | C. Long context | 288 GB per chip | MI455X: 432 GB, the largest | 144 GB per chip; relies on 144-chip pooling | 216 GiB |
 | D. MoE | 72-GPU NVLink domains | MI355X: 8-GPU node; Helios: 72 | 144-chip domain, dedicated collective cores | 128-chip local collective domain |
 | E. Speculative decoding | Most mature (EAGLE, MTP) | Supported | EAGLE3 in vLLM Neuron | Not used in the published runs |
@@ -490,8 +486,6 @@ Memory check (Little's law)
   KV needed            = sequences × (P + O/2) × KV bytes per token
 Link check             λ · P · KV bytes per token ≤ link bandwidth
 ```
-
-<figure><img src="/assets/img/flops-are-not-tokens/capacity-planning.svg" alt="capacity planning" loading="lazy"></figure>
 
 <figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v2.svg" alt="capacity planning v2" loading="lazy"></figure>
 
@@ -597,10 +591,6 @@ SemiAnalysis InferenceX, DeepSeek R1, 8K in / 1K out, FP8, priced on hyperscaler
 ### Step 1: which platform family?
 
 <figure><img src="/assets/img/flops-are-not-tokens/decision-tree-v2.svg" alt="decision tree v2" loading="lazy"></figure>
-
-<figure><img src="/assets/img/flops-are-not-tokens/decision-tree.svg" alt="Corrected: every chip here supports custom kernels (CUDA, HIP, NKI). The GPU question is whether you depend on the CUDA / ROCm kernel ecosystem." loading="lazy"><figcaption>Corrected: every chip here supports custom kernels (CUDA, HIP, NKI). The GPU question is whether you depend on the CUDA / ROCm kernel ecosystem.</figcaption></figure>
-
-<figure><img src="/assets/img/flops-are-not-tokens/diagram6-decision-tree.svg" alt="diagram6 decision tree" loading="lazy"></figure>
 
 ### Step 2: which spec to prioritize?
 
