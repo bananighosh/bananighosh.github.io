@@ -3,6 +3,7 @@ title: "FLOPS Are Not Tokens: A First-Principles Guide to NVIDIA, AMD, AWS Train
 summary: "Why peak FLOPS do not tell you which chip serves your model faster, and how memory, energy, kernels, compilers, networking, and workload shape actually decide inference performance."
 tags: [inference, gpu, asic, trainium]
 math: false
+published: false
 ---
 
 <nav class="toc" markdown="1">
