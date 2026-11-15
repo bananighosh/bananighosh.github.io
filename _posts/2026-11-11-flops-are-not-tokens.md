@@ -355,14 +355,14 @@ Model graph → compiler IR → fusion → tiling → SRAM placement → engine 
 
 Between NVIDIA and AMD the names differ but the concepts map closely; porting usually fails on tile shapes and wave-size assumptions, not syntax. The real jump is GPU to ASIC: Trainium has no warps and no hardware warp scheduler, so nothing swaps in other work while an engine waits. Occupancy gives way to overlap: the static schedule must keep DMA transfers and the Tensor, Vector, Scalar, and GpSimd engines busy at the same time. Coalescing survives as DMA efficiency: a transfer needs at least 2 KiB of contiguous data per partition to approach peak bandwidth, and one large DMA beats many small ones. On top of that, you reason about SBUF partition layout and which operand stays stationary in the systolic array.
 
-<b>Custom kernels exist on both sides.</b> On Trainium they are written in NKI (Neuron Kernel Interface), a Python-based kernel language that exposes the Neuron ISA directly through <code>nki.isa</code>. AWS maintains the open-source NKI Library of pre-optimized, production-grade kernels, and NKI kernels run inside the PyTorch workflow, so the serving stacks built on it can use them. The difference from CUDA is what you control: no threads to schedule, but explicit tiles, SRAM placement, and DMA transfers.
+<b>Custom kernels exist on both sides.</b> On Trainium they are written in NKI (Neuron Kernel Interface), a bare-metal kernel language, written in Python, that exposes the NeuronCore ISA directly through <code>nki.isa</code>. AWS publishes the NKI Library, an open-source set of pre-built kernels optimized for Neuron devices, and NKI kernels drop into PyTorch and JAX models as custom operators. The difference from CUDA is what you control: no warps to schedule, but explicit tiles, SRAM placement, and DMA transfers.
 
 ### Across the chips: the kernel level
 
 | Concept | NVIDIA | AMD | AWS Trainium | OpenAI Jalapeño |
 | --- | --- | --- | --- | --- |
 | Write a fused kernel in | CUDA, Triton, CUTLASS/CuTe | HIP, Triton, Composable Kernel | NKI (Python, direct ISA access) or the open-source NKI Library; Neuron compiler for the rest of the graph | Internal only |
-| Execution unit | SM, warp of 32 threads | CU, wavefront (CDNA 5 moves to Wave32) | NeuronCore-v4: Tensor, Vector, Scalar, GpSimd engines. No threads | Not disclosed |
+| Execution unit | SM, warp of 32 threads | CU, wavefront (CDNA 5 moves to Wave32) | NeuronCore-v4: Tensor, Vector, Scalar, GpSimd engines. No warps | Not disclosed |
 | Programmer SRAM | Shared memory | LDS | SBUF: 32 MiB per core, 128 partitions | Not disclosed |
 | Accumulators | Registers; Tensor Memory on Blackwell | VGPRs / AGPRs | PSUM: 2 MiB per core | Not disclosed |
 | HBM to SRAM movement | TMA, async copies | Global / buffer loads | 128 DMA engines, explicit in NKI, scheduled by the compiler | Not disclosed |
