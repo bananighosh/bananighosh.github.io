@@ -1,0 +1,9 @@
+{% assign l = site.links %}
+<ul class="profile-links">
+  {% if l.github != "" %}<li><a href="https://github.com/{{ l.github }}">GitHub</a></li>{% endif %}
+  {% if l.linkedin != "" %}<li><a href="https://www.linkedin.com/in/{{ l.linkedin }}">LinkedIn</a></li>{% endif %}
+  {% if l.x != "" %}<li><a href="https://x.com/{{ l.x }}">X</a></li>{% endif %}
+  {% if l.leetcode != "" %}<li><a href="https://leetcode.com/u/{{ l.leetcode }}">LeetCode</a></li>{% endif %}
+  {% if l.resume != "" %}<li><a href="{{ l.resume | relative_url }}">Resume</a></li>{% endif %}
+  {% if l.email != "" %}<li><a href="mailto:{{ l.email }}">Email</a></li>{% endif %}
+</ul>
