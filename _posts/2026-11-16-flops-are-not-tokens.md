@@ -53,7 +53,7 @@ This post walks that chain once, and at every link asks the same question of the
 | --- | --- | --- |
 | Roofline | Attainable speed = min(peak compute, arithmetic intensity × memory bandwidth) | 3 |
 | Memory-bandwidth lower bound | Each decode step reads every weight once, so step time ≥ weight bytes ÷ bandwidth | 3 |
-| Weight reuse vs KV reuse | Batching shares weight reads; KV cache reads are per sequence and never shared | 3, 4 |
+| Weight reuse vs KV reuse | Batching shares weight reads; KV cache reads are per sequence unless sequences share a prefix | 3, 4 |
 | KV size | Bytes per token = 2 × layers × KV heads × head dim × bytes per element | 4 |
 | Data-movement energy | Reading a byte from DRAM costs far more energy than computing on it | 5 |
 | Tile quantization | Fixed-size matrix tiles are paid for in full even when mostly empty | 6 |
@@ -66,13 +66,13 @@ This post walks that chain once, and at every link asks the same question of the
 
 ## 2. What is physically different inside the chips
 
-A GPU is thousands of programmable workers sharing caches the hardware manages. An ASIC is a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
+A GPU is thousands of programmable workers sharing caches the hardware manages. A domain-specific AI accelerator such as Trainium uses a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
 
 <figure><img src="/assets/img/flops-are-not-tokens/hierarchy-v3.png" alt="hierarchy v3" loading="lazy"></figure>
 
 Both designs have software-managed SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is what sits behind it. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp.
 
-Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a schedule built ahead of time by the Neuron compiler or an NKI kernel. When the work is predictable, that schedule wastes nothing, and serving stacks compile one schedule per shape bucket to keep it that way. Trainium3 adds dynamic shapes and control flow to the NeuronCore-v4 ISA, so fewer buckets are needed. This trade-off, explicit and efficient versus hardware-managed and flexible, is the core difference between a GPU and an AI ASIC.
+Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a schedule built ahead of time by the Neuron compiler or an NKI kernel. When the work is predictable, that schedule keeps every engine fed, and serving stacks compile one schedule per shape bucket to keep it that way. Trainium3 adds dynamic shapes and control flow to the NeuronCore-v4 ISA, so fewer buckets are needed. GPUs also move data under software control, through Blackwell's TMA and asynchronous copies, so the difference is the division of work: on a GPU, hardware caches and warp schedulers absorb what software leaves unplanned; on Trainium, the compiler or kernel plans the movement up front.
 
 ### Across the chips: anatomy
 
@@ -98,7 +98,7 @@ What the reallocation buys, beyond cost:
 - <b>Communication that does not steal compute.</b> On GPUs, collectives run on the same SMs as the math. DeepSeek-V3 gave 20 of 132 H800 SMs (15.2%) to all-to-all, and asked hardware vendors to offload communication from the SMs. Trainium3 ships 16 dedicated collective cores per chip.
 - <b>More on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip. For scale, an H100 has 228 KB of shared memory per SM × 132 SMs = 30,096 KB.
 - <b>Larger scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1. <b>Jalapeño</b>: 128 chips per rack over a local collective network, 2,048 per Ethernet pod. <b>GB300 NVL72</b>: 72 GPUs over NVLink.
-- <b>More tokens per watt.</b> Jalapeño moves 15.4 TB/s of HBM traffic on a 700 W budget, 22.0 GB/s per watt. A B300 or an MI355X moves 8 TB/s on 1,400 W, 5.71 GB/s per watt, 3.85x less. Trainium follows the same path: the Trn3 UltraServer delivers over 4x the energy efficiency of the Trn2 UltraServer.
+- <b>More tokens per watt.</b> Jalapeño has 15.4 TB/s of peak HBM bandwidth on a 700 W chip power budget, 22.0 GB/s per watt. A B300 or an MI355X has 8 TB/s on 1,400 W, 5.71 GB/s per watt, 3.85x less. Trainium follows the same path: the Trn3 UltraServer delivers over 4x the energy efficiency of the Trn2 UltraServer.
 
 ### Less memory per chip, same performance
 
@@ -110,7 +110,7 @@ Compare the unit you actually buy. Nobody serves a frontier model on one chip. Y
 | --- | --- | --- |
 | Chips | 72 B300 | 144 Trainium3 |
 | FP8 dense | 360 PF | 362.4 PF |
-| HBM capacity | 20.7 TB | 20.7 TB |
+| HBM capacity (nominal) | 20.7 TB | 20.7 TB |
 | HBM bandwidth | 576 TB/s | 705.6 TB/s |
 
 Every figure is dense. NVIDIA's 720 PF headline for GB300 NVL72 counts FP8 with sparsity, and with sparsity Trainium3 runs BF16 at 2.517 PF per chip as well. The capacity worry is a per-chip artifact, and on HBM bandwidth, the number that sets decode speed, the UltraServer leads by 1.225x.
@@ -132,9 +132,7 @@ Jalapeño makes the same argument from the other direction: less HBM than a B300
 
 ## 3. Prefill vs decode: why one request stresses hardware two ways
 
-<b>Prefill</b> reads the whole prompt at once: lots of math, very parallel. <b>Decode</b> writes one token at a time: very little math per step, but every step re-reads all the weights and the whole KV cache.
-
-
+<b>Prefill</b> reads the whole prompt at once: lots of math, very parallel. <b>Decode</b> writes one token at a time: very little math per step, but every step re-reads the weights (only the active experts in a MoE model) and each sequence's KV cache.
 
 <figure><img src="/assets/img/flops-are-not-tokens/prefill-decode-v3.png" alt="prefill decode v3" loading="lazy"></figure>
 
@@ -253,7 +251,7 @@ Bytes read per decode token (70.55 GB of FP8 weights):
   batch 64:  70.55 GB ÷ 64 = 1.10 GB per token
 ```
 
-At batch 1, decode does two FLOPs for every byte it pulls from HBM, so almost all of its energy goes to moving weights. Batching divides the weight bytes per token, which makes <b>batching an energy optimization, not only a throughput one</b>.
+The 45 nm figures show the size of the gap between moving data and computing on it, not modern absolute values. At batch 1, decode does two FLOPs for every byte it pulls from HBM, so almost all of its energy goes to moving weights. Batching divides the weight bytes per token, which makes <b>batching an energy optimization, not only a throughput one</b>.
 
 Three levers cut energy per token: keep more data on chip, move fewer bits per value, and spend silicon and power on data movement rather than on flexibility decode does not use.
 
@@ -263,7 +261,7 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 | --- | --- | --- | --- | --- |
 | Main lever | NVFP4 at 3x the FP8 rate: fewer bytes per weight | 3 nm compute dies on 6 nm base dies: more math per watt | Explicitly scheduled SRAM reuse (compiler or NKI); collectives that move data SBUF to SBUF | Bandwidth first: 15.4 TB/s at 700 W |
 
-<b>Reading the table.</b> Both ASICs push energy efficiency. Jalapeño moves 22.0 GB/s of HBM traffic per watt, 3.85x a B300, and that lead shows up in OpenAI's measured 1.5x to 1.9x throughput per watt. Each Trainium generation raises the bar: Trn3 delivers over 5x the output tokens per megawatt of Trn2. Efficiency follows where each design spends its power budget.
+<b>Reading the table.</b> Both ASICs push energy efficiency. Jalapeño has 22.0 GB/s of peak HBM bandwidth per watt of chip power, 3.85x a B300, and that lead shows up in OpenAI's measured 1.5x to 1.9x throughput per watt. Each Trainium generation raises the bar: Trn3 delivers over 5x the output tokens per megawatt of Trn2. Efficiency follows where each design spends its power budget.
 
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
@@ -276,7 +274,7 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 
 ## 6. Tile quantization: the hidden tax on small batches
 
-Matrix units work on fixed-size blocks. If the block has room for 128 rows and you bring 8, you still pay for 128 and get 8.
+Matrix units work on fixed-size blocks. If the block has room for 128 rows and you bring 8, you still pay for 128 and get 8. This is a simplified padding model: real utilization also depends on operand orientation, instruction granularity, and how the kernel maps the GEMM onto the hardware.
 
 <figure><img src="/assets/img/flops-are-not-tokens/tile-quantization.png" alt="tile quantization" loading="lazy"></figure>
 
@@ -324,7 +322,16 @@ Tensor-parallel decode, running example on 8 chips, 32 sequences, BF16 activatio
 
 More link bandwidth barely helps here; lower latency does. That is why serving stacks ship one-shot all-reduce kernels for small messages, and why vendors push reductions into the fabric.
 
-Keep tensor parallelism inside the scale-up domain. Place expert parallelism where its all-to-all fits. Only pipeline and data parallelism should cross to scale-out networking.
+Each kind of parallelism puts a different load on the fabric:
+
+| Parallelism | What is split | Traffic | Where it fits |
+| --- | --- | --- | --- |
+| Tensor (TP) | Each layer's matrices | Two all-reduces per layer, small and latency-bound | Inside the scale-up domain |
+| Expert (EP) | MoE experts | Two all-to-alls per MoE layer | Inside the scale-up domain where possible |
+| Pipeline (PP) | Groups of layers | Activations between stages, once per stage | Scale-up or scale-out |
+| Data (DP) | Whole model replicas | None during serving | Anywhere |
+
+Domain size is one factor for expert parallelism. Collective startup latency, topology, expert placement, routing imbalance, and overlap with compute decide the rest, and cross-node expert parallelism can still pay off when those are well managed.
 
 ### Across the chips: scale-up
 
@@ -429,7 +436,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 <figure><img src="/assets/img/flops-are-not-tokens/moe-layer-v2.png" alt="moe layer v2" loading="lazy"></figure>
 
-<b>E. Speculative decoding.</b> Verifying K draft tokens at once turns 1-row decode into K-row decode: higher arithmetic intensity, fuller tiles. Gains shrink at high batch because batching already used the spare compute.
+<b>E. Speculative decoding.</b> A small draft proposes K tokens and the target model verifies them in one pass, turning 1-row decode into (K+1)-row decode: higher arithmetic intensity, fuller tiles. If each draft token is accepted with probability α, one verification step emits (1 − α^(K+1)) ÷ (1 − α) tokens on average, so the gain grows with α and with how cheap the draft is. Gains shrink at high batch because batching already used the spare compute, so the best K falls as batch size rises.
 
 ### Across the systems: the five scenarios
 
@@ -482,7 +489,7 @@ Prefill and decode form a two-stage pipeline: every request passes through prefi
 
 <b>Little's law.</b> In any stable system, the average number of items inside equals their arrival rate times the average time each one stays: L = λ × W. In decode the items are sequences, and each stays for O × TPOT, so sequences in flight = λ × O × TPOT. Every one of them holds its KV cache in HBM the whole time, which is what sets decode memory.
 
-<b>Utilization and waiting.</b> When requests arrive at random, average waiting time grows as ρ ÷ (1 − ρ) times the service time, where ρ is utilization, the fraction of time a node is busy. Waiting rises without bound as ρ approaches 1, so every pool runs with ρ below 1.
+<b>Utilization and waiting.</b> When requests arrive at random and a single server handles them in turn (an M/M/1 queue), average waiting time grows as ρ ÷ (1 − ρ) times the service time, where ρ is utilization, the fraction of time a node is busy. Waiting rises without bound as ρ approaches 1, so every pool runs with ρ below 1.
 
 ```txt
 Inputs
@@ -556,7 +563,7 @@ Spec sheets lead with peak FLOPS. Serving bills are paid per token. Most serving
 
 ### Why per-chip specs do not set cost per token
 
-This is the Section 0 puzzle: two GPUs with identical specs land up to 3.22x apart on cost per token. InferenceX, DeepSeek R1, 8K in / 1K out, FP8, priced on hyperscaler ownership cost (GB300 $2.31/chip-hr, MI355X $1.50/chip-hr):
+This is the Section 0 puzzle: two GPUs with identical specs land up to 3.22x apart on cost per token. InferenceX run of November 5, 2026, DeepSeek R1, 8K in / 1K out, FP8, priced on hyperscaler ownership cost (GB300 $2.31/chip-hr, MI355X $1.50/chip-hr):
 
 | Interactivity (tok/s/user) | GB300 NVL72 $/M tokens | MI355X $/M tokens | Cost gap |
 | --- | --- | --- | --- |
@@ -564,14 +571,14 @@ This is the Section 0 puzzle: two GPUs with identical specs land up to 3.22x apa
 | 112 | $0.134 | $0.432 | 3.22x |
 | 159 | $0.643 | $1.091 | 1.70x |
 
-- <b>The scale-up domain sets the gap.</b> MI355X costs 35.1% less per chip-hour, yet more per token, because GB300 serves more tokens per chip. DeepSeek R1 is MoE, and expert parallelism needs all-to-all every layer. On GB300 that traffic stays inside a 72-GPU NVLink domain; on MI355X it leaves the 8-GPU node for scale-out networking (Section 7). Add software maturity and the gap compounds. FLOPS play no part.
+- <b>Where the gap comes from.</b> MI355X costs 35.1% less per chip-hour, yet more per token, because GB300 serves more tokens per chip. DeepSeek R1 is MoE, and expert parallelism needs all-to-all every layer: on GB300 that traffic stays inside a 72-GPU NVLink domain, while on MI355X it leaves the 8-GPU node for scale-out networking (Section 7). Kernels and serving configuration differ too, and the benchmark measures their combined effect. Peak FLOPS, identical on both, is not the cause.
 - <b>Software moves cost.</b> On the same GB300 NVL72 serving DeepSeek R1 in FP8, multi-token prediction reaches 73.7 tok/s/user at $0.093 per million tokens; without it, the fastest configuration reaches 45.0 tok/s/user at $0.107.
-- <b>What favors ASICs.</b> The lever that opened this gap, the scale-up domain, is where ASIC systems are built large: 144 chips on one NeuronLink-v4 domain in the Trainium3 UltraServer, 128 chips in Jalapeño’s local domain.
+- <b>What favors ASICs.</b> One lever behind this gap, the scale-up domain, is where ASIC systems are built large: 144 chips on one NeuronLink-v4 domain in the Trn3 Gen2 UltraServer, 128 chips in Jalapeño’s local domain.
 
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
 
-<b>Takeaway:</b> rank cost-per-token drivers in this order: software (speculative decoding, PD disaggregation, kernel quality) → $/chip-hr → HBM bandwidth → scale-up domain (MoE) → FP4 throughput (prefill) → FP8 peak. Peak FLOPS is last, not first.
+<b>Takeaway:</b> rank cost-per-token drivers in this order: software (speculative decoding, PD disaggregation, kernel quality) → $/chip-hr → HBM bandwidth → scale-up domain (MoE) → FP4 throughput (prefill) → FP8 peak. Peak FLOPS is last, not first. Count only tokens served within your TTFT and TPOT targets (goodput): a system that makes more tokens but misses the SLO costs more per useful token.
 
 </div>
 
@@ -608,7 +615,7 @@ This is the Section 0 puzzle: two GPUs with identical specs land up to 3.22x apa
 <div class="callout callout-purple" markdown="1">
 <span class="callout-icon">🧩</span>
 
-<b>One question to leave you with.</b> On Trainium every decision is explicit, and a good schedule wastes nothing. Someone has to choose which matrix stays stationary in a 128×128 systolic array, what lives in 32 MiB of SBUF per core, and when each of 128 DMA engines fires. The Neuron compiler makes those choices automatically, and NKI gives kernel engineers direct control when they want it. So what does one attention layer look like on Trainium, and where does a custom NKI kernel beat the compiler?
+<b>One question to leave you with.</b> On Trainium every decision is explicit, and a good schedule keeps every engine busy. Someone has to choose which matrix stays stationary in a 128×128 systolic array, what lives in 32 MiB of SBUF per core, and when each of 128 DMA engines fires. The Neuron compiler makes those choices automatically, and NKI gives kernel engineers direct control when they want it. So what does one attention layer look like on Trainium, and where does a custom NKI kernel beat the compiler?
 
 </div>
 
@@ -629,6 +636,7 @@ This is the Section 0 puzzle: two GPUs with identical specs land up to 3.22x apa
 - Hockney: The communication challenge for MPP, Parallel Computing 1994
 - Horowitz: Computing's Energy Problem, ISSCC 2014
 - Little: A Proof for the Queuing Formula L = λW, Operations Research 1961
+- [Leviathan, Kalman, Matias: Fast Inference from Transformers via Speculative Decoding, ICML 2023](https://arxiv.org/abs/2211.17192)
 - [DeepSeek-V3 Technical Report](https://arxiv.org/pdf/2412.19437)
 - [Llama 3.3 70B config](https://huggingface.co/unsloth/Llama-3.3-70B-Instruct-bnb-4bit/raw/main/config.json)
 - [LMSYS-Chat-1M](https://arxiv.org/html/2309.11998v4)
