@@ -6,12 +6,13 @@ math: false
 published: false
 ---
 
-<nav class="toc" markdown="1">
-**Contents**
+<details class="toc" markdown="1">
+<summary>Table of contents</summary>
 
 * TOC
 {:toc}
-</nav>
+
+</details>
 
 ---
 
