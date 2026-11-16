@@ -66,13 +66,15 @@ This post walks that chain once, and at every link asks the same question of the
 
 ## 2. What is physically different inside the chips
 
-A GPU is thousands of programmable workers sharing caches the hardware manages. A domain-specific AI accelerator such as Trainium uses a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
+A GPU is thousands of programmable workers sharing caches the hardware manages. An ASIC such as Trainium uses a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
 
 <figure><img src="/assets/img/flops-are-not-tokens/hierarchy-v3.png" alt="hierarchy v3" loading="lazy"></figure>
 
+
+
 Both designs have software-managed SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is what sits behind it. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp.
 
-Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a schedule built ahead of time by the Neuron compiler or an NKI kernel. When the work is predictable, that schedule keeps every engine fed, and serving stacks compile one schedule per shape bucket to keep it that way. Trainium3 adds dynamic shapes and control flow to the NeuronCore-v4 ISA, so fewer buckets are needed. GPUs also move data under software control, through Blackwell's TMA and asynchronous copies, so the difference is the division of work: on a GPU, hardware caches and warp schedulers absorb what software leaves unplanned; on Trainium, the compiler or kernel plans the movement up front.
+Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a schedule built ahead of time by the Neuron compiler or an NKI kernel. When the work is predictable, that schedule keeps every engine fed, and serving stacks compile one schedule per shape bucket to keep it that way. Trainium3 adds dynamic shapes and control flow to the NeuronCore-v4 ISA, so fewer buckets are needed. GPUs also move data under software control, through Blackwell's TMA and asynchronous copies, so the difference is the division of work: on a GPU, hardware caches and warp schedulers handle at run time what software leaves unplanned; on Trainium, the compiler or kernel plans the movement ahead of time.
 
 ### Across the chips: anatomy
 
@@ -624,69 +626,53 @@ This is the Section 0 puzzle: two GPUs with identical specs land up to 3.22x apa
 
 ---
 
-## Sources
+## References
 
-### Benchmarks
+Web pages accessed November 2026.
 
-- [SemiAnalysis InferenceX: DeepSeek R1, GB300 NVL72 vs MI355X](https://inferencex.semianalysis.com/compare-per-dollar/deepseek-r1-gb300-vs-mi355x/8k-1k)
-- [SemiAnalysis InferenceX: supported accelerators](https://inferencex.semianalysis.com/about)
-- [OpenAI: Jalapeño first results](https://openai.com/index/jalapeno-first-results/)
-- [SemiAnalysis: OpenAI Jalapeño, Better Than Nvidia Blackwell](https://inferencex.semianalysis.com/blog/openai-jalapeno-better-than-nvidia)
-
-### Papers, models, and data
-
-- [Williams, Waterman, Patterson: Roofline, CACM 2009](https://dl.acm.org/doi/10.1145/1498765.1498785)
-- Hockney: The communication challenge for MPP, Parallel Computing 1994
-- Horowitz: Computing's Energy Problem, ISSCC 2014
-- Little: A Proof for the Queuing Formula L = λW, Operations Research 1961
-- [Leviathan, Kalman, Matias: Fast Inference from Transformers via Speculative Decoding, ICML 2023](https://arxiv.org/abs/2211.17192)
-- [DeepSeek-V3 Technical Report](https://arxiv.org/pdf/2412.19437)
-- [Llama 3.3 70B config](https://huggingface.co/unsloth/Llama-3.3-70B-Instruct-bnb-4bit/raw/main/config.json)
-- [LMSYS-Chat-1M](https://arxiv.org/html/2309.11998v4)
-- [OCP Microscaling Formats v1.0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf)
-
-### NVIDIA
-
-- [GB300 NVL72](https://www.nvidia.com/en-us/data-center/gb300-nvl72/)
-- [GB200 NVL72](https://www.nvidia.com/en-us/data-center/gb200-nvl72/)
-- [Hopper tuning guide](https://docs.nvidia.com/cuda/hopper-tuning-guide/index.html)
-- [Matrix multiplication background guide](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html)
-- [CUTLASS: Blackwell formats](https://www.mintlify.com/NVIDIA/cutlass/architectures/blackwell)
-- [CUDA C++ Programming Guide: hardware multithreading](https://docs.nvidia.com/cuda/cuda-c-programming-guide/)
-- [PyTorch: torch.compile](https://docs.pytorch.org/docs/stable/torch.compiler.html)
-
-### AMD
-
-- [Instinct MI355X](https://www.amd.com/en/products/accelerators/instinct/mi350/mi355x.html)
-- [ROCm: MI350 Series microarchitecture](https://rocm.docs.amd.com/en/latest/reference/gpu-arch/mi350.html)
-- [Wccftech: MI355X launch](https://wccftech.com/amd-instinct-mi350-mi355x-launched-3nm-185-billion-transistors-288-gb-hbm3e-fp4-fp6-2-2x-faster-blackwell-b200/)
-
-### OpenAI Jalapeño
-
-- [OpenAI and Broadcom: Jalapeño](https://openai.com/index/openai-broadcom-jalapeno-inference-chip/)
-- [ServeTheHome: Jalapeño at Hot Chips 2026](https://www.servethehome.com/openai-jalapeno-asic-at-hot-chips-2026/)
-- [Tom's Hardware: Jalapeño at Hot Chips 2026](https://www.tomshardware.com/tech-industry/artificial-intelligence/hot-chips-2026-openais-jalapeno-ai-asic-unpacked-accelerator-developed-using-ai-achieves-efficiency-and-throughput-gains-against-power-hungry-blackwell)
-- [Tom's Hardware: Jalapeño for internal use](https://www.tomshardware.com/tech-industry/artificial-intelligence/openais-custom-jalapeno-ai-inference-asic-is-for-openais-internal-use-but-company-leaves-the-door-open-to-broader-rollout-firm-says-it-will-have-its-hands-full-with-jalapeno-for-a-good-long-time)
-- [HotHardware: Jalapeño](https://hothardware.com/news/openai-broadcom-reveal-jalapeno-ai-chip)
-
-### AWS Trainium
-
-- [Amazon EC2 Trn3](https://aws.amazon.com/ec2/instance-types/trn3/)
-- [Amazon: Trainium3 UltraServers now available](https://press.aboutamazon.com/2025/12/trainium3-ultraservers-now-available-enabling-customers-to-train-and-deploy-ai-models-faster-at-lower-cost)
-- [Amazon: Project Rainier](https://aboutamazon.com/news/aws/aws-project-rainier-ai-trainium-chips-compute-cluster/)
-- [Neuron: Trainium3 specifications](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/about-neuron/arch/neuron-hardware/trainium3.html)
-- [Neuron: Trn3 architecture](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/about-neuron/arch/neuron-hardware/trn3-arch.html)
-- [Neuron: Trainium3 architecture guide for NKI](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/nki/guides/architecture/trainium3_arch.html)
-- [Neuron: Trainium architecture guide for NKI](https://awsdocs-neuron.readthedocs-hosted.com/en/v2.32.0/_sources/nki/guides/architecture/trainium_inferentia2_arch.rst)
-- [Neuron: NKI DMA bandwidth guide](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/nki/deep-dives/nki-dma-bandwidth-guide.html)
-- [Neuron: NKI](https://awsdocs-neuron.readthedocs-hosted.com/en/v2.31.0/_sources/nki/index.rst)
-- [Neuron: collective communication](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/general/arch/neuron-features/collective-communication.html)
-- [Neuron: developer tools](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/tools/index.rst)
-- [Neuron: speculative decoding in vLLM Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/vllm-neuron/docs/design/speculation/speculative_decoding_design.md)
-- [Neuron: disaggregated inference in vLLM Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/vllm-neuron/docs/design/vllm/disaggregated-inference.md)
-- [GitHub: NKI Library](https://github.com/aws-neuron/nki-library)
-- [GitHub: TorchNeuron](https://github.com/aws-neuron/torch-neuronx)
-- [GitHub: vLLM Neuron](https://github.com/vllm-project/vllm-neuron)
-- [LMSYS: SGLang Trainium plugin beta](https://www.lmsys.org/blog/2026-10-22-sglang-trainium-beta)
-- [SemiAnalysis: Trainium3 deep dive](https://newsletter.semianalysis.com/p/aws-trainium3-deep-dive-a-potential)
-- [Tom's Hardware: Trainium3 launch](https://www.tomshardware.com/tech-industry/artificial-intelligence/amazon-launches-trainium3-ai-accelerator-competing-directly-against-blackwell-ultra-in-fp8-performance-new-trn3-gen2-ultraserver-takes-vertical-scaling-notes-from-nvidias-playbook)
+1. S. Williams, A. Waterman, D. Patterson. [Roofline: An Insightful Visual Performance Model for Multicore Architectures](https://dl.acm.org/doi/10.1145/1498765.1498785). Communications of the ACM, 2009.
+2. R. Hockney. The Communication Challenge for MPP: Intel Paragon and Meiko CS-2. Parallel Computing, 1994.
+3. M. Horowitz. Computing's Energy Problem (and What We Can Do About It). ISSCC, 2014.
+4. J. Little. A Proof for the Queuing Formula L = λW. Operations Research, 1961.
+5. Y. Leviathan, M. Kalman, Y. Matias. [Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/abs/2211.17192). ICML, 2023.
+6. DeepSeek-AI. [DeepSeek-V3 Technical Report](https://arxiv.org/abs/2412.19437). 2024.
+7. L. Zheng et al. [LMSYS-Chat-1M: A Large-Scale Real-World LLM Conversation Dataset](https://arxiv.org/abs/2309.11998). ICLR, 2024.
+8. Open Compute Project. [OCP Microscaling Formats (MX) Specification v1.0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf). 2023.
+9. Meta. [Llama 3.3 70B model configuration](https://huggingface.co/unsloth/Llama-3.3-70B-Instruct-bnb-4bit/raw/main/config.json).
+10. SemiAnalysis. [InferenceX: DeepSeek R1, GB300 NVL72 vs MI355X, 8K/1K](https://inferencex.semianalysis.com/compare-per-dollar/deepseek-r1-gb300-vs-mi355x/8k-1k). Run of November 5, 2026.
+11. SemiAnalysis. [InferenceX: supported accelerators](https://inferencex.semianalysis.com/about).
+12. SemiAnalysis. [OpenAI Jalapeño: Better Than Nvidia Blackwell](https://inferencex.semianalysis.com/blog/openai-jalapeno-better-than-nvidia). 2026.
+13. SemiAnalysis. [AWS Trainium3 Deep Dive](https://newsletter.semianalysis.com/p/aws-trainium3-deep-dive-a-potential). 2025.
+14. NVIDIA. [GB300 NVL72](https://www.nvidia.com/en-us/data-center/gb300-nvl72/).
+15. NVIDIA. [GB200 NVL72](https://www.nvidia.com/en-us/data-center/gb200-nvl72/).
+16. NVIDIA. [CUDA C++ Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/).
+17. NVIDIA. [Hopper Tuning Guide](https://docs.nvidia.com/cuda/hopper-tuning-guide/index.html).
+18. NVIDIA. [Matrix Multiplication Background User's Guide](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html).
+19. NVIDIA. [CUTLASS: Blackwell architecture](https://www.mintlify.com/NVIDIA/cutlass/architectures/blackwell).
+20. PyTorch. [torch.compile](https://docs.pytorch.org/docs/stable/torch.compiler.html).
+21. AMD. [Instinct MI355X](https://www.amd.com/en/products/accelerators/instinct/mi350/mi355x.html).
+22. AMD. [ROCm: MI350 Series microarchitecture](https://rocm.docs.amd.com/en/latest/reference/gpu-arch/mi350.html).
+23. AWS. [Amazon EC2 Trn3 instances](https://aws.amazon.com/ec2/instance-types/trn3/).
+24. Amazon. [Trainium3 UltraServers now available](https://press.aboutamazon.com/2025/12/trainium3-ultraservers-now-available-enabling-customers-to-train-and-deploy-ai-models-faster-at-lower-cost). 2025.
+25. Amazon. [Project Rainier](https://aboutamazon.com/news/aws/aws-project-rainier-ai-trainium-chips-compute-cluster/). 2025.
+26. AWS Neuron. [Trainium3](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/about-neuron/arch/neuron-hardware/trainium3.html).
+27. AWS Neuron. [Trn3 architecture](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/about-neuron/arch/neuron-hardware/trn3-arch.html).
+28. AWS Neuron. [Trainium3 architecture guide for NKI](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/nki/guides/architecture/trainium3_arch.html).
+29. AWS Neuron. [Trainium architecture guide for NKI](https://awsdocs-neuron.readthedocs-hosted.com/en/v2.32.0/_sources/nki/guides/architecture/trainium_inferentia2_arch.rst).
+30. AWS Neuron. [NKI DMA bandwidth guide](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/nki/deep-dives/nki-dma-bandwidth-guide.html).
+31. AWS Neuron. [Neuron Kernel Interface (NKI)](https://awsdocs-neuron.readthedocs-hosted.com/en/v2.31.0/_sources/nki/index.rst).
+32. AWS Neuron. [Collective communication](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/general/arch/neuron-features/collective-communication.html).
+33. AWS Neuron. [Developer tools](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/tools/index.rst).
+34. AWS Neuron. [Speculative decoding in vLLM Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/vllm-neuron/docs/design/speculation/speculative_decoding_design.md).
+35. AWS Neuron. [Disaggregated inference in vLLM Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/vllm-neuron/docs/design/vllm/disaggregated-inference.md).
+36. AWS. [NKI Library](https://github.com/aws-neuron/nki-library). GitHub.
+37. AWS. [TorchNeuron](https://github.com/aws-neuron/torch-neuronx). GitHub.
+38. vLLM Project. [vLLM Neuron](https://github.com/vllm-project/vllm-neuron). GitHub.
+39. LMSYS. [SGLang Trainium plugin beta](https://www.lmsys.org/blog/2026-10-22-sglang-trainium-beta). 2026.
+40. OpenAI. [OpenAI and Broadcom: Jalapeño](https://openai.com/index/openai-broadcom-jalapeno-inference-chip/). 2026.
+41. OpenAI. [Jalapeño first results](https://openai.com/index/jalapeno-first-results/). 2026.
+42. ServeTheHome. [OpenAI Jalapeño at Hot Chips 2026](https://www.servethehome.com/openai-jalapeno-asic-at-hot-chips-2026/). 2026.
+43. Tom's Hardware. [Hot Chips 2026: OpenAI's Jalapeño unpacked](https://www.tomshardware.com/tech-industry/artificial-intelligence/hot-chips-2026-openais-jalapeno-ai-asic-unpacked-accelerator-developed-using-ai-achieves-efficiency-and-throughput-gains-against-power-hungry-blackwell). 2026.
+44. Tom's Hardware. [Jalapeño is for OpenAI's internal use](https://www.tomshardware.com/tech-industry/artificial-intelligence/openais-custom-jalapeno-ai-inference-asic-is-for-openais-internal-use-but-company-leaves-the-door-open-to-broader-rollout-firm-says-it-will-have-its-hands-full-with-jalapeno-for-a-good-long-time). 2026.
+45. HotHardware. [OpenAI and Broadcom reveal Jalapeño](https://hothardware.com/news/openai-broadcom-reveal-jalapeno-ai-chip). 2026.
+46. Tom's Hardware. [Amazon launches Trainium3](https://www.tomshardware.com/tech-industry/artificial-intelligence/amazon-launches-trainium3-ai-accelerator-competing-directly-against-blackwell-ultra-in-fp8-performance-new-trn3-gen2-ultraserver-takes-vertical-scaling-notes-from-nvidias-playbook). 2025.
