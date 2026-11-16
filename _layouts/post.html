@@ -23,3 +23,54 @@ layout: default
     {% if page.next %}<a href="{{ page.next.url | relative_url }}">{{ page.next.title }} →</a>{% endif %}
   </nav>
 </article>
+
+<aside class="toc-float" id="toc-float" hidden>
+  <button type="button" class="toc-float-btn" aria-expanded="false" aria-controls="toc-float-panel">Contents</button>
+  <div class="toc-float-panel" id="toc-float-panel"></div>
+</aside>
+<script>
+(function () {
+  var src = document.querySelector('.post-body .toc ul');
+  var aside = document.getElementById('toc-float');
+  if (!src || !aside) return;
+  var panel = document.getElementById('toc-float-panel');
+  var btn = aside.querySelector('.toc-float-btn');
+  panel.appendChild(src.cloneNode(true));
+  aside.hidden = false;
+  var wide = matchMedia('(min-width: 1240px)');
+  function setOpen(open) {
+    aside.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  function sync() { setOpen(wide.matches); }
+  sync();
+  (wide.addEventListener ? wide.addEventListener('change', sync) : wide.addListener(sync));
+  btn.addEventListener('click', function () { setOpen(!aside.classList.contains('open')); });
+  panel.addEventListener('click', function (e) {
+    if (e.target.closest('a') && !wide.matches) setOpen(false);
+  });
+  var inline = document.querySelector('.post-body .toc');
+  function onScroll() {
+    var past = inline.getBoundingClientRect().bottom < 0;
+    aside.classList.toggle('visible', wide.matches || past);
+  }
+  addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  var links = panel.querySelectorAll('a[href^="#"]');
+  var heads = [];
+  links.forEach(function (a) {
+    var h = document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)));
+    if (h) heads.push({ h: h, a: a });
+  });
+  function mark() {
+    var cur = null;
+    for (var i = 0; i < heads.length; i++) {
+      if (heads[i].h.getBoundingClientRect().top < innerHeight * 0.3) cur = heads[i]; else break;
+    }
+    links.forEach(function (a) { a.classList.remove('active'); });
+    if (cur) cur.a.classList.add('active');
+  }
+  addEventListener('scroll', mark, { passive: true });
+  mark();
+})();
+</script>
