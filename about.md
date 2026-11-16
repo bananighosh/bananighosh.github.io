@@ -6,32 +6,36 @@ permalink: /about/
 
 <div class="about" markdown="1">
 
-# About
+<div class="about-head">
+  <img class="avatar" src="https://github.com/bananighosh.png" alt="Banani Ghosh" width="112" height="112">
+  <div>
+    <h1>Banani Ghosh</h1>
+    <p class="tagline">ML Performance Engineer, AWS Trainium · Sunnyvale, CA</p>
+  </div>
+</div>
 
-My passion is squeezing performance out of ML systems. I am an ML Performance Engineer on AWS Trainium, working on distributed training and inference on Trn3 and Trn4. Before that I optimized agentic execution graphs and model routing for Amazon Quick, contributed kernel auto-tuning and speculative decoding work to vLLM, and spent eight years at Adobe building cloud platforms.
+My passion is squeezing performance out of ML systems. I work on distributed training and inference performance on AWS Trainium (Trn3 and Trn4), contribute to vLLM, and write here about GPUs and AI accelerators from first principles. Before that I optimized agentic LLM pipelines for Amazon Quick and spent eight years at Adobe building cloud platforms.
 
 <p class="profile-links"><a href="https://github.com/bananighosh">GitHub</a> · <a href="https://www.linkedin.com/in/banani-ghosh/">LinkedIn</a></p>
 
-## Experience
+## Work
 
 ### ML Performance Engineer, AWS Trainium
-<p class="meta">Amazon · Sunnyvale, CA · Current role</p>
+<p class="meta">Amazon · Sunnyvale, CA · Current</p>
 
-Distributed training and inference on Trn3 and Trn4.
+Distributed training and inference performance on Trn3 and Trn4.
 
 ### Software Development Engineer, Amazon Quick
 <p class="meta">Amazon · Sunnyvale, CA · From Jun 2025</p>
 
-- Optimized multi-step agentic reasoning execution graphs, removing redundant LLM calls and reducing dependency depth: 25% fewer model invocations, 20% lower p95 latency, and double the end-to-end throughput for 500K+ users.
-- Built complexity-aware semantic routing across model tiers for automatic model selection.
-- Built runtime control and telemetry pipelines with AppConfig and Amazon Kinesis, capturing per-step latency and token metrics with under 1 ms of control-path overhead.
+Optimized agentic execution graphs for 500K+ users (25% fewer model invocations, 20% lower p95 latency, 2x end-to-end throughput) and built complexity-aware routing across model tiers.
 
 ### Machine Learning Engineering Intern
 <p class="meta">Root Access · New York, NY · Jan 2025 – May 2025</p>
 
-Fine-tuned Llama 3 8B with QLoRA into an assistant for firmware engineers, with a multimodal RAG pipeline for semantic search across datasheets.
+Fine-tuned Llama 3 8B with QLoRA into an assistant for firmware engineers, with multimodal RAG across datasheets.
 
-### Computer Scientist, and earlier roles
+### Computer Scientist
 <p class="meta">Adobe · Noida, India · May 2015 – Jul 2023</p>
 
 - Led the SaaS/CaaS teams for Adobe software provisioning on AWS and Kubernetes, with GitOps CI/CD, onboarding 72% more microservices.

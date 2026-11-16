@@ -172,3 +172,8 @@ html { scroll-behavior: smooth; }
 .about li { margin: 4px 0; }
 .about .profile-links { font: 15px var(--sans); margin: 4px 0 0; }
 .about .profile-links a { text-decoration: none; }
+.about-head { display: flex; align-items: center; gap: 20px; margin: 0 0 20px; }
+.about-head .avatar { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; flex: none; background: var(--code-bg); }
+.about-head h1 { margin: 0 0 4px; }
+.about .tagline { margin: 0; font: 16px var(--sans); color: var(--muted); }
+@media (max-width: 560px) { .about-head { gap: 14px; } .about-head .avatar { width: 80px; height: 80px; } }
