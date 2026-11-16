@@ -1,25 +1,12 @@
 title: Banani Ghosh
-description: Software engineer at Amazon working on LLM inference performance and ML systems. I write about GPUs, accelerators, and serving efficiency from first principles.
+description: First-principles notes on GPU performance, LLM inference, and ML systems.
 author: Banani Ghosh
 url: "https://bananighosh.github.io"
 baseurl: ""
 
-# Profile links on the homepage. Leave a value empty to hide that link.
-links:
-  github: bananighosh
-  linkedin: ""   # LinkedIn slug, e.g. banani-ghosh
-  x: ""          # X handle without @
-  leetcode: ""   # LeetCode username
-  resume: ""     # e.g. /assets/resume.pdf after adding the file
-  email: ""      # public contact email
-
-# Used by jekyll-seo-tag for link previews
-twitter:
-  username: ""
-social:
-  name: Banani Ghosh
-  links:
-    - https://github.com/bananighosh
+github_username: bananighosh
+x_username: ""        # add your X handle without @
+linkedin_username: "" # add your LinkedIn slug
 
 permalink: /:year/:month/:title/
 timezone: America/Los_Angeles
