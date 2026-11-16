@@ -134,9 +134,9 @@ Jalapeño makes the same argument from the other direction: less HBM than a B300
 
 <b>Prefill</b> reads the whole prompt at once: lots of math, very parallel. <b>Decode</b> writes one token at a time: very little math per step, but every step re-reads all the weights and the whole KV cache.
 
-<figure><img src="/assets/img/flops-are-not-tokens/diagram2-prefill-vs-decode-v2.png" alt="diagram2 prefill vs decode v2" loading="lazy"></figure>
 
 
+<figure><img src="/assets/img/flops-are-not-tokens/prefill-decode-v3.png" alt="prefill decode v3" loading="lazy"></figure>
 
 <b>Deep dive: tensor shapes.</b>
 
