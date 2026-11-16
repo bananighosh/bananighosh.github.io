@@ -3,7 +3,6 @@ title: "FLOPS Are Not Tokens: A First-Principles Guide to GPUs and ASICs for LLM
 summary: "Why peak FLOPS do not tell you which chip serves your model faster, and how memory, energy, kernels, compilers, networking, and workload shape actually decide inference performance."
 tags: [inference, gpu, asic, trainium]
 math: false
-published: false
 ---
 
 <details class="toc" markdown="1">
@@ -69,11 +68,9 @@ This post walks that chain once, and at every link asks the same question of the
 
 A GPU is thousands of programmable workers sharing caches the hardware manages. An ASIC is a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
 
-<figure><img src="/assets/img/flops-are-not-tokens/gpu-vs-trainium3-hierarchy.png" alt="Both designs exist to keep data on chip. The GPU uses many small SRAMs and hardware schedulers; Trainium3 uses eight cores with 32 MiB of software-managed SBUF each, fed by explicit DMA that the compiler or an NKI kernel schedules." loading="lazy"><figcaption>Both designs exist to keep data on chip. The GPU uses many small SRAMs and hardware schedulers; Trainium3 uses eight cores with 32 MiB of software-managed SBUF each, fed by explicit DMA that the compiler or an NKI kernel schedules.</figcaption></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/hierarchy-v3.png" alt="hierarchy v3" loading="lazy"></figure>
 
-<p>
-Both designs have software-managed SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is what sits behind it. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp. 
-</p>
+Both designs have software-managed SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is what sits behind it. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp.
 
 Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a schedule built ahead of time by the Neuron compiler or an NKI kernel. When the work is predictable, that schedule wastes nothing, and serving stacks compile one schedule per shape bucket to keep it that way. Trainium3 adds dynamic shapes and control flow to the NeuronCore-v4 ISA, so fewer buckets are needed. This trade-off, explicit and efficient versus hardware-managed and flexible, is the core difference between a GPU and an AI ASIC.
 
@@ -139,6 +136,8 @@ Jalapeño makes the same argument from the other direction: less HBM than a B300
 
 <figure><img src="/assets/img/flops-are-not-tokens/diagram2-prefill-vs-decode-v2.png" alt="diagram2 prefill vs decode v2" loading="lazy"></figure>
 
+
+
 <b>Deep dive: tensor shapes.</b>
 
 ```txt
@@ -156,11 +155,7 @@ Changing <b>S to 1</b> is the whole story: the same weight matrix, multiplied by
 
 For FP8 decode, the weight reads alone give an arithmetic intensity of <b>2 × batch</b> FLOPs per byte (each weight byte does one multiply-add per sequence in the batch). For prefill it is 2 × batch × prompt length, far above any ridge.
 
-<figure><img src="/assets/img/flops-are-not-tokens/roofline-rack-v2.svg" alt="Roofline per system for GB300 NVL72 and the Trn3 Gen2 UltraServer, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound on both systems." loading="lazy"><figcaption>Roofline per system for GB300 NVL72 and the Trn3 Gen2 UltraServer, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound on both systems.</figcaption></figure>
-
-<figure><img src="/assets/img/flops-are-not-tokens/roofline-trn3.svg" alt="Roofline for the Trn3 Gen2 UltraServer, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound." loading="lazy"><figcaption>Roofline for the Trn3 Gen2 UltraServer, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound.</figcaption></figure>
-
-<figure><img src="/assets/img/flops-are-not-tokens/roofline-system.svg" alt="Roofline per system for GB300 NVL72 and the Trn3 Gen2 UltraServer, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound on both systems." loading="lazy"><figcaption>Roofline per system for GB300 NVL72 and the Trn3 Gen2 UltraServer, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound on both systems.</figcaption></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/roofline-system-v2.png" alt="Roofline per system for the Trn3 Gen2 UltraServer and GB300 NVL72, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound on both systems." loading="lazy"><figcaption>Roofline per system for the Trn3 Gen2 UltraServer and GB300 NVL72, with Llama 3.3 70B decode at batch 1, 64, and 256 (weights only), the maximum arithmetic intensity at 32K context for any batch, and an 8K-token prefill. Everything in the shaded band is memory-bound on both systems.</figcaption></figure>
 
 <b>Latency is two numbers, throughput a third.</b> <b>TTFT</b> (time to first token) is driven by prefill plus queueing. <b>TPOT</b> (time per output token) is driven by decode. <b>Throughput</b>, in output tokens or requests completed per second, is measured at a given concurrency: more concurrent requests raise throughput until TTFT or TPOT misses its target. A chip can be great at one and mediocre at another, which is the root reason for prefill/decode disaggregation (Section 11).
 
@@ -316,7 +311,7 @@ Prefill fills tiles easily (batch × prompt rows). Decode at small batch wastes 
 
 Large models span many chips, and chips must talk every layer. The <b>α–β model</b> gives the cost of each message: sending n bytes takes α + n ÷ β, where α is the fixed startup latency every message pays before any bytes flow and β is the link bandwidth. Small messages are dominated by α, large messages by n ÷ β.
 
-<figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-v4.svg" alt="scale hierarchy v4" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-v4.png" alt="scale hierarchy v4" loading="lazy"></figure>
 
 ```txt
 Message time = α (startup latency) + size ÷ β (bandwidth)
@@ -344,7 +339,7 @@ Keep tensor parallelism inside the scale-up domain. Place expert parallelism whe
 
 - <b>NVIDIA</b> joins 72 GPUs over NVLink, and the switches perform part of each reduction themselves, so collectives spend less time on the GPUs.
 - <b>AMD</b> MI355X joins 8 GPUs per node over Infinity Fabric at 1,008 GB/s per GPU. Once expert parallelism spans more than 8 GPUs, the two all-to-alls in every MoE layer leave the node for the RDMA Ethernet scale-out network, and every decode step pays that slower hop.
-- <b>Trn3 UltraServer</b> keeps 144 chips in one NeuronLink-v4 domain through NeuronSwitch-v1: 2,560 GB/s per chip, 1,280 GB/s of it across servers. Expert parallelism can span all 144 chips without touching the scale-out network, and 16 dedicated CC-Cores per chip run the collectives, so communication does not compete with the compute engines.
+- <b>Trainium3 UltraServer</b> keeps 144 chips in one NeuronLink-v4 domain through NeuronSwitch-v1: 2,560 GB/s per chip, 1,280 GB/s of it across servers. Expert parallelism can span all 144 chips without touching the scale-out network, and 16 dedicated CC-Cores per chip run the collectives, so communication does not compete with the compute engines.
 - <b>Jalapeño</b> keeps 128 chips in a local domain and joins 16 racks into a 2,048-chip Ethernet pod. Its links run at 600 GB/s per chip, against 1.8 TB/s on GB300, while its HBM delivers 15.4 TB/s at 700 W (Section 5).
 
 <div class="pullquote" markdown="1">
@@ -357,9 +352,9 @@ Interconnect bandwidth can matter more than another few hundred TFLOPS.
 
 A chip is only as fast as the code that runs on it. An excellent chip with a weak compiler loses to weaker hardware with a mature stack.
 
-<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v2.svg" alt="software stacks v2" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v3.png" alt="software stacks v3" loading="lazy"></figure>
 
-<b>Where did my kernel go?</b> On a GPU, the engineer writes and tunes the fused kernel. On Trainium, the Neuron compiler fuses and schedules the graph by default, and performance-critical operators are written as NKI kernels:
+<b>Compilers and kernels.</b> Both platforms pair a compiler with hand-written kernels. A compiler fuses most of the graph (torch.compile on GPUs, the Neuron compiler on Trainium), and performance-critical operators are hand-tuned kernels (CUDA or Triton on GPUs, NKI on Trainium). The difference is scheduling: the Neuron compiler also plans every DMA transfer and engine instruction stream, work GPU hardware does at run time:
 
 ```txt
 Model graph → compiler IR → fusion → tiling → SRAM placement → engine scheduling → accelerator instructions
@@ -432,7 +427,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 <b>D. Mixture of Experts.</b> Each layer adds two all-to-alls, and the busiest device sets the pace. Large scale-up domains are built for this: the Trn3 UltraServer keeps all-to-all inside 144 chips and runs it on 16 dedicated CC-Cores, and Jalapeño keeps it inside a 128-chip local domain.
 
-<figure><img src="/assets/img/flops-are-not-tokens/moe-layer-v2.svg" alt="moe layer v2" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/moe-layer-v2.png" alt="moe layer v2" loading="lazy"></figure>
 
 <b>E. Speculative decoding.</b> Verifying K draft tokens at once turns 1-row decode into K-row decode: higher arithmetic intensity, fuller tiles. Gains shrink at high batch because batching already used the spare compute.
 
@@ -459,7 +454,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 Prefill wants compute. Decode wants bandwidth, KV capacity, and energy efficiency. Running both on the same chip makes each stall the other. Split them into two pools, and let each pool use the hardware that fits its job.
 
-<figure><img src="/assets/img/flops-are-not-tokens/diagram4-pd-disaggregation.svg" alt="diagram4 pd disaggregation" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/diagram4-pd-disaggregation.png" alt="diagram4 pd disaggregation" loading="lazy"></figure>
 
 TTFT and TPOT get separate targets and separate tuning. And each pool can be sized for its own stage: FLOPS per dollar for prefill, HBM bandwidth per dollar for decode.
 
@@ -505,7 +500,7 @@ Memory check (Little's law)
 Link check             λ · P · KV bytes per token ≤ link bandwidth
 ```
 
-<figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v4.svg" alt="capacity planning v4" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v4.png" alt="capacity planning v4" loading="lazy"></figure>
 
 <b>The shape of the traffic sets the fleet.</b> Two published InferenceX sequence shapes for the same model, and real multi-turn chat traffic:
 
@@ -552,8 +547,6 @@ A system is cheaper for decode than GB300 NVL72 if:
 ## 13. What a token costs
 
 Spec sheets lead with peak FLOPS. Serving bills are paid per token. Most serving cost is decode, and decode is bound by HBM bandwidth, the scale-up fabric, and software, so <b>$/hour ÷ delivered tokens</b> decides fleet economics.
-
-### AWS Trainium3: cost in production
 
 ### ASICs: the principles hold in production
 
@@ -648,6 +641,8 @@ This is the Section 0 puzzle: two GPUs with identical specs land up to 3.22x apa
 - [Hopper tuning guide](https://docs.nvidia.com/cuda/hopper-tuning-guide/index.html)
 - [Matrix multiplication background guide](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html)
 - [CUTLASS: Blackwell formats](https://www.mintlify.com/NVIDIA/cutlass/architectures/blackwell)
+- [CUDA C++ Programming Guide: hardware multithreading](https://docs.nvidia.com/cuda/cuda-c-programming-guide/)
+- [PyTorch: torch.compile](https://docs.pytorch.org/docs/stable/torch.compiler.html)
 
 ### AMD
 
