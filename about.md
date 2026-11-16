@@ -6,7 +6,7 @@ permalink: /about/
 
 # About
 
-I am a Software Development Engineer at Amazon (AWS), working on Amazon Quick. I optimize multi-step agentic execution graphs serving 500K+ users, build complexity-aware semantic routing across model tiers, and instrument agent pipelines for per-step latency and token metrics.
+I am a software engineer at Amazon (AWS), working on ML systems and LLM inference performance.
 
 Outside work, I contribute to [vLLM](https://github.com/vllm-project/vllm). I added config-driven auto-tuning and benchmark tooling to a GPU inference kernel path, improving it by up to 2.46x on NVIDIA B200, and I am working on utility-driven adaptive-k speculative decoding for MoE inference on NVIDIA B200 and GB10.
 
