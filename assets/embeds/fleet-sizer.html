@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prefill/Decode Fleet Sizer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: inputs panel left, results right; stacks to one column on phones. */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --fg:#1b2330; --muted:#5b6676; --line:#dfe3ea;
+  --prefill:#2e7d32; --prefill-bg:#e8f5e9; --decode:#1565c0; --decode-bg:#e3f2fd;
+  --warn:#b45309; --warn-bg:#fff4e0; --accent:#1565c0;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151b; --panel:#181e26; --fg:#e6ebf2; --muted:#9aa6b6; --line:#2a333f;
+  --prefill:#7cc47f; --prefill-bg:#1b2b1d; --decode:#7fb3ee; --decode-bg:#16263a;
+  --warn:#f0b35a; --warn-bg:#2d2312; --accent:#7fb3ee; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151b; --panel:#181e26; --fg:#e6ebf2; --muted:#9aa6b6; --line:#2a333f;
+  --prefill:#7cc47f; --prefill-bg:#1b2b1d; --decode:#7fb3ee; --decode-bg:#16263a;
+  --warn:#f0b35a; --warn-bg:#2d2312; --accent:#7fb3ee; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 40px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:20px}
+h1{font-size:26px;font-weight:600;margin:0;text-wrap:balance}
+.lede{color:var(--muted);margin:4px 0 0;max-width:70ch}
+.note{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:6px;padding:8px 12px;display:inline-block}
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:14px;min-width:0}
+.panel h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:600}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.presets button{font:inherit;font-size:13px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:999px;padding:5px 12px;cursor:pointer}
+.presets button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:500}
+.presets button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.field{display:grid;gap:4px}
+.field label{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.field label .sym{font-family:var(--mono);color:var(--fg)}
+.field input[type=number]{font:inherit;font-family:var(--mono);font-variant-numeric:tabular-nums;width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+.field input[type=range]{width:100%;accent-color:var(--accent)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pools{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:480px){.pools,.row2{grid-template-columns:1fr}}
+.pool{border-radius:8px;padding:14px;display:grid;gap:2px}
+.pool.p{background:var(--prefill-bg);color:var(--prefill)}
+.pool.d{background:var(--decode-bg);color:var(--decode)}
+.pool .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.pool .v{font-family:var(--mono);font-size:40px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--fg)}
+.pool .s{font-size:13px;color:var(--muted)}
+.bar{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.bar span{display:block;height:100%}
+.bar .bp{background:var(--prefill)} .bar .bd{background:var(--decode)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td{padding:7px 0;border-top:1px solid var(--line);vertical-align:top}
+td:last-child{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:12px}
+td .f{display:block;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.flag{font-size:13px;border-radius:6px;padding:8px 12px;background:var(--warn-bg);color:var(--warn)}
+.flag[hidden]{display:none}
+footer{font-size:12px;color:var(--muted);max-width:80ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Prefill/Decode Fleet Sizer</h1>
+    <p class="lede">Size each pool from demand, not 50/50. Enter your traffic and the throughput you measured per node; the sizer applies the capacity-planning formulas and Little's law from the post.</p>
+  </header>
+  <p class="note">Default node throughputs are example values for illustration, not measurements of any chip. Replace them with numbers you measured.</p>
+
+  <div class="grid">
+    <section class="panel" aria-label="Inputs">
+      <h2>Traffic shape</h2>
+      <div class="presets" role="group" aria-label="Traffic presets">
+        <button type="button" data-p="1024" data-o="8192" aria-pressed="true">Reasoning, 1K in / 8K out</button>
+        <button type="button" data-p="8192" data-o="1024" aria-pressed="false">RAG, 8K in / 1K out</button>
+        <button type="button" data-p="70" data-o="215" aria-pressed="false">Chat turn, 70 in / 215 out</button>
+      </div>
+      <div class="field"><label for="lam">Arrival rate <span class="sym">λ</span></label><input id="lam" type="number" min="0.1" step="any" value="100"><span class="s" style="font-size:12px;color:var(--muted)">requests per second</span></div>
+      <div class="row2">
+        <div class="field"><label for="P">Prompt tokens <span class="sym">P</span></label><input id="P" type="number" min="1" step="1" value="1024"></div>
+        <div class="field"><label for="O">Output tokens <span class="sym">O</span></label><input id="O" type="number" min="1" step="1" value="8192"></div>
+      </div>
+
+      <h2>Per-node throughput (yours)</h2>
+      <div class="row2">
+        <div class="field"><label for="mup">Prefill <span class="sym">μ_p</span></label><input id="mup" type="number" min="1" step="any" value="50000"><span style="font-size:12px;color:var(--muted)">prompt tokens/s per node</span></div>
+        <div class="field"><label for="mud">Decode <span class="sym">μ_d</span></label><input id="mud" type="number" min="1" step="any" value="10000"><span style="font-size:12px;color:var(--muted)">output tokens/s per node</span></div>
+      </div>
+      <div class="field"><label for="tpot">Time per output token <span class="sym">TPOT</span></label><input id="tpot" type="number" min="0.001" step="any" value="0.02"><span style="font-size:12px;color:var(--muted)">seconds, at the decode batch you run</span></div>
+      <div class="field"><label for="rho">Target utilization <span class="sym" id="rhoOut">ρ = 0.80</span></label><input id="rho" type="range" min="0.3" max="0.95" step="0.01" value="0.8"></div>
+
+      <h2>Memory</h2>
+      <div class="row2">
+        <div class="field"><label for="kv">KV bytes per token</label><input id="kv" type="number" min="1" step="1" value="163840"><span style="font-size:12px;color:var(--muted)">Llama 3.3 70B, FP8 KV</span></div>
+        <div class="field"><label for="free">HBM free for KV per decode node</label><input id="free" type="number" min="1" step="any" value="500"><span style="font-size:12px;color:var(--muted)">GB, after weights</span></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Results" aria-live="polite">
+      <h2>Fleet</h2>
+      <div class="pools">
+        <div class="pool p"><span class="k">Prefill nodes</span><span class="v" id="Np">0</span><span class="s" id="NpSub"></span></div>
+        <div class="pool d"><span class="k">Decode nodes</span><span class="v" id="Nd">0</span><span class="s" id="NdSub"></span></div>
+      </div>
+      <div class="bar" aria-hidden="true"><span class="bp" id="barP"></span><span class="bd" id="barD"></span></div>
+      <p class="flag" id="memFlag" hidden></p>
+      <table>
+        <tbody>
+          <tr><td>Prefill load<span class="f">λ × P</span></td><td id="loadP"></td></tr>
+          <tr><td>Decode load<span class="f">λ × O</span></td><td id="loadD"></td></tr>
+          <tr><td>Decode nodes for throughput<span class="f">⌈λ·O ÷ (ρ·μ_d)⌉</span></td><td id="NdT"></td></tr>
+          <tr><td>Sequences in flight (Little's law)<span class="f">λ × O × TPOT</span></td><td id="seq"></td></tr>
+          <tr><td>KV cache held, upper bound<span class="f">sequences × (P + O) × KV bytes</span></td><td id="kvTot"></td></tr>
+          <tr><td>Decode nodes for KV memory<span class="f">⌈KV held ÷ free HBM per node⌉</span></td><td id="NdM"></td></tr>
+          <tr><td>KV handoff, prefill to decode<span class="f">λ × P × KV bytes</span></td><td id="hand"></td></tr>
+          <tr><td>Waiting factor at this utilization<span class="f">ρ ÷ (1 − ρ), M/M/1</span></td><td id="wait"></td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <footer>Formulas from "FLOPS Are Not Tokens", Section 12. The KV upper bound counts each sequence at its full context of P + O tokens; real usage averages lower as sequences grow during decode. The waiting factor assumes an M/M/1 queue; Little's law holds for any stable system.</footer>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var ids=["lam","P","O","mup","mud","tpot","rho","kv","free"];
+  function num(id){var v=parseFloat($(id).value);return isFinite(v)&&v>0?v:NaN}
+  function fmt(n,d){return n.toLocaleString("en-US",{maximumFractionDigits:d===undefined?0:d,minimumFractionDigits:d===undefined?0:d})}
+  function bytes(b){
+    if(b>=1e15)return fmt(b/1e15,2)+" PB";
+    if(b>=1e12)return fmt(b/1e12,2)+" TB";
+    if(b>=1e9)return fmt(b/1e9,2)+" GB";
+    return fmt(b/1e6,2)+" MB";
+  }
+  function calc(){
+    var lam=num("lam"),P=num("P"),O=num("O"),mup=num("mup"),mud=num("mud"),tpot=num("tpot"),rho=parseFloat($("rho").value),kv=num("kv"),free=num("free");
+    $("rhoOut").textContent="ρ = "+rho.toFixed(2);
+    if([lam,P,O,mup,mud,tpot,kv,free].some(isNaN)){return}
+    var loadP=lam*P, loadD=lam*O;
+    var Np=Math.ceil(loadP/(rho*mup));
+    var NdT=Math.ceil(loadD/(rho*mud));
+    var seq=lam*O*tpot;
+    var kvTot=seq*(P+O)*kv;
+    var NdM=Math.ceil(kvTot/(free*1e9));
+    var Nd=Math.max(NdT,NdM);
+    var hand=lam*P*kv;
+    $("Np").textContent=fmt(Np);
+    $("Nd").textContent=fmt(Nd);
+    $("NpSub").textContent=fmt(loadP)+" prompt tokens/s";
+    $("NdSub").textContent=(NdM>NdT?"set by KV memory":"set by throughput");
+    var tot=Np+Nd; $("barP").style.width=(100*Np/tot)+"%"; $("barD").style.width=(100*Nd/tot)+"%";
+    $("loadP").textContent=fmt(loadP)+" tok/s";
+    $("loadD").textContent=fmt(loadD)+" tok/s";
+    $("NdT").textContent=fmt(NdT);
+    $("seq").textContent=fmt(seq,1);
+    $("kvTot").textContent=bytes(kvTot);
+    $("NdM").textContent=fmt(NdM);
+    $("hand").textContent=bytes(hand)+"/s";
+    $("wait").textContent=fmt(rho/(1-rho),2)+"× service time";
+    var f=$("memFlag");
+    if(NdM>NdT){f.hidden=false;f.textContent="KV memory, not throughput, sets the decode pool: "+fmt(NdM)+" nodes to hold the cache against "+fmt(NdT)+" for throughput. More HBM per node or a smaller KV cache (FP8 or FP4 KV, MLA) shrinks it.";}
+    else{f.hidden=true}
+  }
+  ids.forEach(function(id){$(id).addEventListener("input",function(){
+    if(id==="P"||id==="O")document.querySelectorAll(".presets button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.p===$("P").value&&b.dataset.o===$("O").value))});
+    calc();})});
+  document.querySelectorAll(".presets button").forEach(function(b){b.addEventListener("click",function(){
+    $("P").value=b.dataset.p;$("O").value=b.dataset.o;
+    document.querySelectorAll(".presets button").forEach(function(x){x.setAttribute("aria-pressed",String(x===b))});
+    calc();})});
+  calc();
+})();
+</script>
+
+<script>
+(function () {
+  function setTheme(t) { if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); }
+  try { setTheme(new URLSearchParams(location.search).get('theme')); } catch (e) {}
+  function report() {
+    if (parent === window) return;
+    parent.postMessage({ embedHeight: document.documentElement.scrollHeight, embedId: 'fleet-sizer' }, '*');
+  }
+  addEventListener('message', function (e) { if (e.data && e.data.embedTheme) setTheme(e.data.embedTheme); });
+  addEventListener('load', report);
+  addEventListener('resize', report);
+  if (window.ResizeObserver) new ResizeObserver(report).observe(document.body);
+  report();
+})();
+</script>
+</body>
+</html>

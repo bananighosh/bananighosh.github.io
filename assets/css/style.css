@@ -158,3 +158,7 @@ html { scroll-behavior: smooth; }
   .toc-float-panel ul { padding: 0; }
   .post-body > .toc { display: none; }
 }
+
+/* Embedded interactive tools */
+.post-body figure.embed { margin: 32px 0; }
+.embed-frame { display: block; width: 100%; height: 1500px; border: 1px solid var(--rule); border-radius: 10px; background: transparent; }

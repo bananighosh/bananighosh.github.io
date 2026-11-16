@@ -331,7 +331,7 @@ Each kind of parallelism puts a different load on the fabric:
 | Pipeline (PP) | Groups of layers | Activations between stages, once per stage | Scale-up or scale-out |
 | Data (DP) | Whole model replicas | None during serving | Anywhere |
 
-Domain size is one factor for expert parallelism. Collective startup latency, topology, expert placement, routing imbalance, and overlap with compute decide the rest, and cross-node expert parallelism can still pay off when those are well managed.
+Domain size sets how far expert parallelism can spread on the fast fabric. Collective startup latency, topology, expert placement, routing imbalance, and overlap with compute set how well it runs there.
 
 ### Across the chips: scale-up
 
@@ -508,6 +508,9 @@ Link check             λ · P · KV bytes per token ≤ link bandwidth
 ```
 
 <figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v4.png" alt="capacity planning v4" loading="lazy"></figure>
+
+<figure class="embed"><iframe class="embed-frame" data-embed="fleet-sizer" src="/assets/embeds/fleet-sizer.html" title="Prefill/Decode Fleet Sizer" loading="lazy"></iframe></figure>
+
 
 <b>The shape of the traffic sets the fleet.</b> Two published InferenceX sequence shapes for the same model, and real multi-turn chat traffic:
 

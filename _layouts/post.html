@@ -74,3 +74,24 @@ layout: default
   mark();
 })();
 </script>
+<script>
+(function () {
+  var frames = document.querySelectorAll('iframe.embed-frame');
+  if (!frames.length) return;
+  function theme() {
+    return document.documentElement.getAttribute('data-theme') ||
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  }
+  addEventListener('message', function (e) {
+    if (!e.data || !e.data.embedHeight) return;
+    frames.forEach(function (f) {
+      if (f.contentWindow === e.source) f.style.height = Math.ceil(e.data.embedHeight) + 'px';
+    });
+  });
+  function sendTheme() {
+    frames.forEach(function (f) { try { f.contentWindow.postMessage({ embedTheme: theme() }, '*'); } catch (e) {} });
+  }
+  frames.forEach(function (f) { f.addEventListener('load', sendTheme); });
+  new MutationObserver(sendTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
