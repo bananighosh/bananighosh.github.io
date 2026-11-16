@@ -72,34 +72,34 @@ footer{font-size:12px;color:var(--muted);max-width:80ch}
     <h1>Prefill/Decode Fleet Sizer</h1>
     <p class="lede">Size each pool from demand, not 50/50. Enter your traffic and the throughput you measured per node; the sizer applies the capacity-planning formulas and Little's law from the post.</p>
   </header>
-  <p class="note">Default node throughputs are example values for illustration, not measurements of any chip. Replace them with numbers you measured.</p>
+  <p class="note">Defaults are roofline ceilings for one Trn3 server (4 Trainium3 chips: 576 GB HBM, 19.6 TB/s, 10.068 PF dense FP8) serving Llama 3.3 70B in FP8. Measured throughput is lower; enter your own to replace them.</p>
 
   <div class="grid">
     <section class="panel" aria-label="Inputs">
       <h2>Traffic shape</h2>
       <div class="presets" role="group" aria-label="Traffic presets">
-        <button type="button" data-p="1024" data-o="8192" aria-pressed="true">Reasoning, 1K in / 8K out</button>
-        <button type="button" data-p="8192" data-o="1024" aria-pressed="false">RAG, 8K in / 1K out</button>
-        <button type="button" data-p="70" data-o="215" aria-pressed="false">Chat turn, 70 in / 215 out</button>
+        <button type="button" data-p="1024" data-o="8192" aria-pressed="false">Reasoning, 1K in / 8K out</button>
+        <button type="button" data-p="8192" data-o="1024" aria-pressed="true">RAG, 8K in / 1K out</button>
+        <button type="button" data-p="69.5" data-o="214.5" aria-pressed="false">Chat turn, 69.5 in / 214.5 out</button>
       </div>
-      <div class="field"><label for="lam">Arrival rate <span class="sym">λ</span></label><input id="lam" type="number" min="0.1" step="any" value="100"><span class="s" style="font-size:12px;color:var(--muted)">requests per second</span></div>
+      <div class="field"><label for="lam">Arrival rate <span class="sym">λ</span></label><input id="lam" type="number" min="0.1" step="any" value="10"><span class="s" style="font-size:12px;color:var(--muted)">requests per second</span></div>
       <div class="row2">
-        <div class="field"><label for="P">Prompt tokens <span class="sym">P</span></label><input id="P" type="number" min="1" step="1" value="1024"></div>
-        <div class="field"><label for="O">Output tokens <span class="sym">O</span></label><input id="O" type="number" min="1" step="1" value="8192"></div>
+        <div class="field"><label for="P">Prompt tokens <span class="sym">P</span></label><input id="P" type="number" min="1" step="any" value="8192"></div>
+        <div class="field"><label for="O">Output tokens <span class="sym">O</span></label><input id="O" type="number" min="1" step="any" value="1024"></div>
       </div>
 
       <h2>Per-node throughput (yours)</h2>
       <div class="row2">
-        <div class="field"><label for="mup">Prefill <span class="sym">μ_p</span></label><input id="mup" type="number" min="1" step="any" value="50000"><span style="font-size:12px;color:var(--muted)">prompt tokens/s per node</span></div>
-        <div class="field"><label for="mud">Decode <span class="sym">μ_d</span></label><input id="mud" type="number" min="1" step="any" value="10000"><span style="font-size:12px;color:var(--muted)">output tokens/s per node</span></div>
+        <div class="field"><label for="mup">Prefill <span class="sym">μ_p</span></label><input id="mup" type="number" min="1" step="any" value=""><span style="font-size:12px;color:var(--muted)">prompt tokens/s per node</span></div>
+        <div class="field"><label for="mud">Decode <span class="sym">μ_d</span></label><input id="mud" type="number" min="1" step="any" value=""><span style="font-size:12px;color:var(--muted)">output tokens/s per node</span></div>
       </div>
-      <div class="field"><label for="tpot">Time per output token <span class="sym">TPOT</span></label><input id="tpot" type="number" min="0.001" step="any" value="0.02"><span style="font-size:12px;color:var(--muted)">seconds, at the decode batch you run</span></div>
+      <div class="field"><label for="tpot">Time per output token <span class="sym">TPOT</span></label><input id="tpot" type="number" min="0.001" step="any" value=""><span style="font-size:12px;color:var(--muted)">seconds, at the decode batch you run</span></div>
       <div class="field"><label for="rho">Target utilization <span class="sym" id="rhoOut">ρ = 0.80</span></label><input id="rho" type="range" min="0.3" max="0.95" step="0.01" value="0.8"></div>
 
       <h2>Memory</h2>
       <div class="row2">
         <div class="field"><label for="kv">KV bytes per token</label><input id="kv" type="number" min="1" step="1" value="163840"><span style="font-size:12px;color:var(--muted)">Llama 3.3 70B, FP8 KV</span></div>
-        <div class="field"><label for="free">HBM free for KV per decode node</label><input id="free" type="number" min="1" step="any" value="500"><span style="font-size:12px;color:var(--muted)">GB, after weights</span></div>
+        <div class="field"><label for="free">HBM free for KV per decode node</label><input id="free" type="number" min="1" step="any" value=""><span style="font-size:12px;color:var(--muted)">GB, after weights</span></div>
       </div>
     </section>
 
@@ -117,7 +117,7 @@ footer{font-size:12px;color:var(--muted);max-width:80ch}
           <tr><td>Decode load<span class="f">λ × O</span></td><td id="loadD"></td></tr>
           <tr><td>Decode nodes for throughput<span class="f">⌈λ·O ÷ (ρ·μ_d)⌉</span></td><td id="NdT"></td></tr>
           <tr><td>Sequences in flight (Little's law)<span class="f">λ × O × TPOT</span></td><td id="seq"></td></tr>
-          <tr><td>KV cache held, upper bound<span class="f">sequences × (P + O) × KV bytes</span></td><td id="kvTot"></td></tr>
+          <tr><td>KV cache held<span class="f">sequences × (P + O/2) × KV bytes</span></td><td id="kvTot"></td></tr>
           <tr><td>Decode nodes for KV memory<span class="f">⌈KV held ÷ free HBM per node⌉</span></td><td id="NdM"></td></tr>
           <tr><td>KV handoff, prefill to decode<span class="f">λ × P × KV bytes</span></td><td id="hand"></td></tr>
           <tr><td>Waiting factor at this utilization<span class="f">ρ ÷ (1 − ρ), M/M/1</span></td><td id="wait"></td></tr>
@@ -126,7 +126,7 @@ footer{font-size:12px;color:var(--muted);max-width:80ch}
     </section>
   </div>
 
-  <footer>Formulas from "FLOPS Are Not Tokens", Section 12. The KV upper bound counts each sequence at its full context of P + O tokens; real usage averages lower as sequences grow during decode. The waiting factor assumes an M/M/1 queue; Little's law holds for any stable system.</footer>
+  <footer>Formulas from "FLOPS Are Not Tokens", Section 12. Each sequence in flight holds P + O/2 tokens of KV cache on average, before the runtime buffers your serving engine reserves. The waiting factor assumes an M/M/1 queue; Little's law holds for any stable system.</footer>
 </div>
 
 <script>
@@ -141,6 +141,20 @@ footer{font-size:12px;color:var(--muted);max-width:80ch}
     if(b>=1e9)return fmt(b/1e9,2)+" GB";
     return fmt(b/1e6,2)+" MB";
   }
+  // Roofline ceilings for one Trn3 server: 4 Trainium3 chips
+  var NODE={hbm:576e9,bw:19.6e12,flops:10.068e15}, W=70553706496;
+  var edited={};
+  function ceilings(){
+    var P=parseFloat($("P").value),O=parseFloat($("O").value),kv=parseFloat($("kv").value);
+    if(!(P>0&&O>0&&kv>0))return;
+    var free=NODE.hbm-W, kvSeq=(P+O/2)*kv, B=Math.floor(free/kvSeq);
+    if(B<1)return;
+    var step=Math.max((W+B*kvSeq)/NODE.bw, 2*W*B/NODE.flops);
+    var vals={mup:NODE.flops/(2*W), mud:B/step, tpot:step, free:free/1e9};
+    var dp={mup:0,mud:0,tpot:5,free:2};
+    Object.keys(vals).forEach(function(k){ if(!edited[k]) $(k).value=+vals[k].toFixed(dp[k]); });
+  }
+  ["mup","mud","tpot","free"].forEach(function(k){ $(k).addEventListener("input",function(){ edited[k]=true; }); });
   function calc(){
     var lam=num("lam"),P=num("P"),O=num("O"),mup=num("mup"),mud=num("mud"),tpot=num("tpot"),rho=parseFloat($("rho").value),kv=num("kv"),free=num("free");
     $("rhoOut").textContent="ρ = "+rho.toFixed(2);
@@ -149,7 +163,7 @@ footer{font-size:12px;color:var(--muted);max-width:80ch}
     var Np=Math.ceil(loadP/(rho*mup));
     var NdT=Math.ceil(loadD/(rho*mud));
     var seq=lam*O*tpot;
-    var kvTot=seq*(P+O)*kv;
+    var kvTot=seq*(P+O/2)*kv;
     var NdM=Math.ceil(kvTot/(free*1e9));
     var Nd=Math.max(NdT,NdM);
     var hand=lam*P*kv;
@@ -171,12 +185,14 @@ footer{font-size:12px;color:var(--muted);max-width:80ch}
     else{f.hidden=true}
   }
   ids.forEach(function(id){$(id).addEventListener("input",function(){
+    if(id==="P"||id==="O"||id==="kv")ceilings();
     if(id==="P"||id==="O")document.querySelectorAll(".presets button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.p===$("P").value&&b.dataset.o===$("O").value))});
     calc();})});
   document.querySelectorAll(".presets button").forEach(function(b){b.addEventListener("click",function(){
-    $("P").value=b.dataset.p;$("O").value=b.dataset.o;
+    $("P").value=b.dataset.p;$("O").value=b.dataset.o;ceilings();
     document.querySelectorAll(".presets button").forEach(function(x){x.setAttribute("aria-pressed",String(x===b))});
     calc();})});
+  ceilings();
   calc();
 })();
 </script>
