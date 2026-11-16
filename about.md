@@ -4,16 +4,63 @@ title: About
 permalink: /about/
 ---
 
+<div class="about" markdown="1">
+
 # About
 
-My passion is squeezing performance out of ML systems: making LLM inference faster and cheaper, from GPU kernels up to how a serving fleet is sized. I do this at Amazon (AWS).
+My passion is squeezing performance out of ML systems. I am an ML Performance Engineer on AWS Trainium, working on distributed training and inference on Trn3 and Trn4. Before that I optimized agentic execution graphs and model routing for Amazon Quick, contributed kernel auto-tuning and speculative decoding work to vLLM, and spent eight years at Adobe building cloud platforms.
 
-Outside work, I contribute to [vLLM](https://github.com/vllm-project/vllm). I added config-driven auto-tuning and benchmark tooling to a GPU inference kernel path, improving it by up to 2.46x on NVIDIA B200, and I am working on utility-driven adaptive-k speculative decoding for MoE inference on NVIDIA B200 and GB10.
+<p class="profile-links"><a href="https://github.com/bananighosh">GitHub</a> · <a href="https://www.linkedin.com/in/banani-ghosh/">LinkedIn</a></p>
 
-From 2015 to 2023 I was a Computer Scientist at Adobe, leading the SaaS/CaaS teams for software provisioning on AWS and Kubernetes. I hold an MS in Computer Engineering from NYU, with coursework in High Performance Machine Learning and Computing Systems and Architecture.
+## Experience
 
-I have spoken at the Grace Hopper Celebration, and won the AMD Pervasive AI Developer Contest and the Adobe Summer Hackathon.
+### ML Performance Engineer, AWS Trainium
+<p class="meta">Amazon · Sunnyvale, CA · Current role</p>
 
-This blog works through GPU and accelerator performance for LLM inference from first principles.
+Distributed training and inference on Trn3 and Trn4.
 
-[GitHub](https://github.com/bananighosh)
+### Software Development Engineer, Amazon Quick
+<p class="meta">Amazon · Sunnyvale, CA · From Jun 2025</p>
+
+- Optimized multi-step agentic reasoning execution graphs, removing redundant LLM calls and reducing dependency depth: 25% fewer model invocations, 20% lower p95 latency, and double the end-to-end throughput for 500K+ users.
+- Built complexity-aware semantic routing across model tiers for automatic model selection.
+- Built runtime control and telemetry pipelines with AppConfig and Amazon Kinesis, capturing per-step latency and token metrics with under 1 ms of control-path overhead.
+
+### Machine Learning Engineering Intern
+<p class="meta">Root Access · New York, NY · Jan 2025 – May 2025</p>
+
+Fine-tuned Llama 3 8B with QLoRA into an assistant for firmware engineers, with a multimodal RAG pipeline for semantic search across datasheets.
+
+### Computer Scientist, and earlier roles
+<p class="meta">Adobe · Noida, India · May 2015 – Jul 2023</p>
+
+- Led the SaaS/CaaS teams for Adobe software provisioning on AWS and Kubernetes, with GitOps CI/CD, onboarding 72% more microservices.
+- Migrated Adobe software to AWS for an 80% performance improvement, handling 1 billion client queries in 60 seconds.
+- Built infrastructure for Adobe's crash reporting solution to handle millions of crashes, improving its efficiency by 55%.
+
+### Software Development Engineer
+<p class="meta">Aricent · Gurugram, India · Jan 2014 – May 2015</p>
+
+C and C++ development on a security gateway controller and a TCP performance-enhancing proxy.
+
+## Open source
+
+### vLLM
+- Added config-driven auto-tuning and benchmark tooling to a GPU inference kernel path, improving it by up to 2.46x on NVIDIA B200.
+- Utility-driven adaptive-k speculative decoding for MoE inference, selecting the draft-token budget per request to balance acceptance against verification cost, on NVIDIA B200 and GB10.
+
+## Education
+
+### M.S. in Computer Engineering, New York University
+<p class="meta">Aug 2023 – May 2025</p>
+
+Coursework in High Performance Machine Learning, Computing Systems and Architecture, Machine Learning, Deep Learning, and Natural Language Processing.
+
+## Talks and awards
+
+- Speaker, Grace Hopper Celebration: Mining Broken User Journeys for Faster Crash Resolution (2017)
+- Poster presenter, AI meets Science, New York: GenAI-powered therapeutic analysis (2024)
+- Hardware winner, AMD Pervasive AI Developer Contest (2024)
+- Winner, Adobe Summer Hackathon: on-premise GenAI chat assistant (2023)
+
+</div>

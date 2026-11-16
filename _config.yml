@@ -6,7 +6,7 @@ baseurl: ""
 
 github_username: bananighosh
 x_username: ""        # add your X handle without @
-linkedin_username: "" # add your LinkedIn slug
+linkedin_username: "banani-ghosh" # add your LinkedIn slug
 
 permalink: /:year/:month/:title/
 timezone: America/Los_Angeles
