@@ -72,7 +72,7 @@ This post walks that chain once, with Trainium3 as the worked example, and names
 
 A GPU is thousands of programmable workers sharing caches the hardware manages. An ASIC such as Trainium uses a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
 
-
+<figure><img src="/assets/img/flops-are-not-tokens/hierarchy-v4.svg" alt="hierarchy v4" loading="lazy"></figure>
 
 Both designs have software-managed SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is what sits behind it. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp.
 
@@ -149,11 +149,11 @@ Changing <b>S to 1</b> is the whole story: the same weight matrix, multiplied by
 
 For FP8 decode, the weight reads alone give an arithmetic intensity of <b>2 × batch</b> FLOPs per byte (each weight byte does one multiply-add per sequence in the batch). For prefill it is 2 × batch × prompt length, far above any ridge.
 
-
+<figure><img src="/assets/img/flops-are-not-tokens/roofline-trainium-gens.svg" alt="Roofline per system for the Trn2, Trn3 Gen1, and Trn3 Gen2 UltraServers, from published peak specifications." loading="lazy"><figcaption>Roofline per system for the Trn2, Trn3 Gen1, and Trn3 Gen2 UltraServers, from published peak specifications.</figcaption></figure>
 
 <b>How the roofline moves from Trainium2 to Trainium3.</b> The Trn2 and Trn3 Gen1 UltraServers both hold 64 chips, so comparing them separates the chip generation from the system size. Dense 8-bit compute grows 1.936x and HBM bandwidth 1.690x, so the ridge point moves from 448.28 to 513.67 FLOP/B, and decode becomes compute-bound at batch 257 instead of 225 (weights only). Scaling Trn3 from 64 to 144 chips raises both ceilings by the same factor and leaves the ridge point at 513.67 FLOP/B. Every decode marker sits left of all three ridge points, so for decode the bandwidth increase is what raises the ceiling. More compute raises the flat roof; more bandwidth raises the slanted one.
 
-
+<figure><img src="/assets/img/flops-are-not-tokens/trainium-gens-scaling.svg" alt="Peak compute, HBM bandwidth, and HBM capacity of each UltraServer relative to Trn2, from published specifications." loading="lazy"><figcaption>Peak compute, HBM bandwidth, and HBM capacity of each UltraServer relative to Trn2, from published specifications.</figcaption></figure>
 
 <b>Latency is two numbers, throughput a third.</b> <b>TTFT</b> (time to first token) is driven by prefill plus queueing. <b>TPOT</b> (time per output token) is driven by decode. <b>Throughput</b>, in output tokens or requests completed per second, is measured at a given concurrency: more concurrent requests raise throughput until TTFT or TPOT misses its target. A chip can be great at one and mediocre at another, which is the root reason for prefill/decode disaggregation (Section 11).
 
@@ -228,7 +228,7 @@ FP8 stores each of Llama 3.3 70B's 70.55 billion parameters in 8 bits, one byte,
 
 Each 576 GB of HBM, one Trn3 server, holds one copy of the weights and 753 conversations at 4K. The UltraServer holds 36 such copies and reads all of their KV cache at 705.6 TB/s.
 
-
+<figure><img src="/assets/img/flops-are-not-tokens/intensity-vs-batch.svg" alt="Decode arithmetic intensity against batch on one Trn3 server, for 4K, 8K, 32K, and 128K contexts. Each curve flattens toward its ceiling as KV traffic grows with the batch, and every ceiling sits below the 513.67 FLOP/B ridge." loading="lazy"><figcaption>Decode arithmetic intensity against batch on one Trn3 server, for 4K, 8K, 32K, and 128K contexts. Each curve flattens toward its ceiling as KV traffic grows with the batch, and every ceiling sits below the 513.67 FLOP/B ridge.</figcaption></figure>
 
 <b>The key insight.</b> Even with HBM packed full of conversations, decode runs at 38.65% of the ridge point or less. KV traffic grows with every sequence you add. That is why, for this model, memory bandwidth, HBM capacity, and KV cache design set decode speed, while extra peak FLOPS barely move it. Three things help: <b>more bandwidth per dollar or per watt</b>, <b>more HBM capacity, and a different attention design such as MLA or KV quantization.</b>
 
