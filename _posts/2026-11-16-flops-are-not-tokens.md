@@ -1,5 +1,5 @@
 ---
-title: "FLOPS Are Not Tokens: A First-Principles Guide to GPUs and ASICs for LLM Inference"
+title: "FLOPS Are Not Tokens: A First-Principles Guide to ASICs for LLM Inference"
 summary: "Why peak FLOPS do not tell you which chip serves your model faster, and how memory, energy, kernels, compilers, networking, and workload shape actually decide inference performance."
 tags: [inference, gpu, asic, trainium]
 math: false
@@ -19,7 +19,7 @@ math: false
 
 Every accelerator spec sheet leads with peak FLOPS. A user sees tokens per second (TPS), and an operator pays per token. During decode, the phase that produces every output token, each step re-reads the model weights and every conversation's KV cache from HBM. For long conversations, the math units wait on those bytes at any batch size (Section 4). While decode stays memory-bound, doubling FLOPS at the same bandwidth leaves tokens per second unchanged.
 
-A GPU is built for generality and carries hardware for many workloads beyond LLM inference. An ASIC such as AWS Trainium3 or OpenAI Jalapeño starts from what inference binds on and spends its die area, power, and HBM interface there.
+A GPU is a general-purpose parallel processor: the same hardware runs graphics, scientific computing, and every kind of machine learning. ASICs like Trainium optimize performance per dollar of total cost of ownership (TCO) across large-scale training and inference workloads, spending die area, power, and the HBM interface on what those workloads bind on: bytes moved, on-chip reuse, and chip-to-chip traffic. For production inference, the key metric is cost per token.
 
 <p>
 <b>The headline numbers do not show which of those choices matter.</b> 
@@ -90,7 +90,7 @@ Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a s
 
 ### Why build an ASIC at all
 
-Every accelerator has the same three fixed budgets: <b>die area, power, and the HBM interface</b>. A GPU spends its budget on generality: thousands of thread contexts, register files, hardware schedulers, caches, and number formats some customer somewhere needs. That is insurance against unknown workloads. An ASIC asks what LLM inference actually binds on (bytes moved, on-chip reuse, chip-to-chip traffic), drops the insurance, and spends the budget there. ASICs like Trainium follow this approach to optimize performance per dollar of total cost of ownership (TCO) across large-scale training and inference workloads, with cost per token as the key metric for production inference.
+Every accelerator has the same three fixed budgets: <b>die area, power, and the HBM interface</b>. A GPU spends its budget on generality: thousands of thread contexts, register files, hardware schedulers, caches, and number formats some customer somewhere needs. That is insurance against unknown workloads. An ASIC asks what LLM inference actually binds on (bytes moved, on-chip reuse, chip-to-chip traffic), drops the insurance, and spends the budget there.
 
 Think of a kitchen equipped for any cuisine against one built only for ramen. The ramen kitchen does not have a better chef. It has no idle equipment, and every square metre goes to the steps that slow ramen down.
 
@@ -440,7 +440,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 | Quantization | Low-precision formats in hardware | FP8, MXFP8, MXFP4 |
 | Launch overhead fix | CUDA Graphs or HIP Graphs | Whole graph compiled per shape bucket and warmed up before serving |
 | Paged KV | PagedAttention | Paged KV cache in fixed-size blocks |
-| Speculative decoding | Draft and verify (EAGLE-style) | EAGLE3 in vLLM Neuron |
+| Speculative decoding | Draft and verify (EAGLE-style, MTP heads) | EAGLE3 in vLLM Neuron; MTP in SGLang-Neuron (GLM-5.2) |
 | PD disaggregation | Separate prefill and decode pools | vLLM Neuron, SGLang Neuron; KV moved over EFA |
 
 <div class="callout callout-green" markdown="1">
