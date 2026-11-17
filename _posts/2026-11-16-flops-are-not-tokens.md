@@ -108,7 +108,7 @@ A large model runs across many chips, so the unit to reason about is the system 
 |  | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
 | Chips | 144 Trainium3 (36 servers × 4) |
-| FP8 dense | 362.448 PF |
+| Dense FP8, MXFP8, or MXFP4 | 362.448 PF |
 | HBM capacity (nominal) | 20.7 TB |
 | HBM bandwidth | 705.6 TB/s |
 | Scale-up | NeuronLink-v4, 2,560 GB/s per chip (both directions) |
@@ -169,7 +169,7 @@ Minimum time per token = 70.55 GB of weights ÷ HBM bandwidth. No kernel can bea
 | Minimum time per token | 3.60 ms |
 | Max tokens/s for one user | 277.8 |
 | Ridge point | 513.67 FLOP/B |
-| Batch at which decode becomes compute-bound | 257 |
+| Weight-only ridge-point batch | 257 |
 | Copies of the weights per UltraServer | 36 |
 
 Each four-chip Trn3 server holds one copy of the weights, the same unit Section 4 uses. In principle, a large enough batch lifts decode past the ridge. In practice, the KV cache stops decode short of it, as the next section shows.
@@ -470,7 +470,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 | Scenario | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
-| A. Prefill | 362.448 PF of dense FP8 |
+| A. Prefill | 362.448 PF of dense FP8, MXFP8, or MXFP4 |
 | B. Low-latency decode | 3.60 ms minimum per token (Section 3) |
 | C. Long context | 20.7 TB of HBM; 3,384 conversations at 32K |
 | D. MoE | One 144-chip NeuronLink-v4 domain; collectives on dedicated CC-Cores |
@@ -572,7 +572,7 @@ For a Trn3 Gen2 UltraServer the denominator is 705.6 TB/s per system. In product
 
 ## 13. What a token costs
 
-Most serving cost is decode, and decode is bound by HBM bandwidth, the scale-up fabric, and software, so <b>$/hour ÷ delivered tokens</b> decides fleet economics.
+In decode-heavy serving, most of the cost is decode, which is bound by HBM bandwidth, the scale-up fabric, and software, so <b>$/hour ÷ delivered tokens</b> decides fleet economics.
 
 ### ASICs: the principles hold in production
 
