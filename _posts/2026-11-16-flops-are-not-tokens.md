@@ -19,7 +19,7 @@ math: false
 
 Every accelerator spec sheet leads with peak FLOPS. A user sees tokens per second (TPS), and an operator pays per token. During decode, the phase that produces every output token, each step re-reads the model weights and every conversation's KV cache from HBM. For long conversations, the math units wait on those bytes at any batch size (Section 4). While decode stays memory-bound, doubling FLOPS at the same bandwidth leaves tokens per second unchanged.
 
-A GPU is a general-purpose parallel processor: the same hardware runs graphics, scientific computing, and every kind of machine learning. ASICs like Trainium optimize performance per dollar of total cost of ownership (TCO) across large-scale training and inference workloads, spending die area, power, and the HBM interface on what those workloads bind on: bytes moved, on-chip reuse, and chip-to-chip traffic. For production inference, the key metric is cost per token.
+ASICs like Trainium optimize performance per dollar of total cost of ownership (TCO) across large-scale training and inference workloads, spending die area, power, and the HBM interface on what those workloads bind on: bytes moved, on-chip reuse, and chip-to-chip traffic. For production inference, the key metric is cost per token.
 
 <p>
 <b>The headline numbers do not show which of those choices matter.</b> 
