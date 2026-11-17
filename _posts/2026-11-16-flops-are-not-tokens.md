@@ -48,7 +48,7 @@ This post walks that chain once, with Trainium3 as the worked example, and names
 | --- | --- | --- | --- |
 | <b>NVIDIA</b> B300 | General-purpose GPU | Available | Flexible GPUs on CUDA, with NVLink rack-scale domains |
 | <b>AMD</b> Instinct MI355X | General-purpose GPU | Available | Flexible GPUs on ROCm |
-| <b>AWS Trainium3</b> (Trn3 Gen2 UltraServer, 144 chips) | Hyperscaler ASIC for training and inference | Available on Amazon EC2 | Software-scheduled ASIC: compiler-managed SRAM, 16 dedicated collective cores per chip, and a 144-chip scale-up domain |
+| <b>AWS Trainium3</b> (Trn3 Gen2 UltraServer, 144 chips) | Hyperscaler ASIC for training and inference | Available on Amazon EC2 | Software-scheduled ASIC: compiler-managed SRAM, dedicated collective cores per chip, and a 144-chip scale-up domain |
 | <b>OpenAI Jalapeño</b> | Inference-only ASIC | OpenAI internal use | Inference ASIC built around OpenAI's own serving patterns: 15.4 TB/s of HBM bandwidth at 700 W |
 
 ### The ten rules that explain everything below
@@ -280,7 +280,6 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 
 Matrix units work on fixed-size blocks. If the block has room for 128 rows and you bring 8, you still pay for 128 and get 8. This is a simplified padding model: real utilization also depends on operand orientation, instruction granularity, and how the kernel maps the GEMM onto the hardware.
 
-<figure><img src="/assets/img/flops-are-not-tokens/tile-quantization.svg" alt="tile quantization" loading="lazy"></figure>
 
 <figure><img src="/assets/img/flops-are-not-tokens/d4_tile_quantization.svg" alt="Tile quantization: decode batch 8 on a 128-row tile does 6.25% useful work; batch 129 drops back to 50.39% because one extra row costs a whole tile." loading="lazy"><figcaption>Tile quantization: decode batch 8 on a 128-row tile does 6.25% useful work; batch 129 drops back to 50.39% because one extra row costs a whole tile.</figcaption></figure>
 
@@ -350,7 +349,7 @@ Domain size sets how far expert parallelism can spread on the fast fabric. Colle
 
 - <b>NVIDIA</b> joins a rack of GPUs over NVLink, and the switches perform part of each reduction themselves, so collectives spend less time on the GPUs.
 - <b>AMD</b> joins the GPUs in a node over Infinity Fabric, and expert parallelism beyond the node runs over the RDMA Ethernet scale-out network.
-- <b>Trainium3 UltraServer</b> keeps 144 chips in one NeuronLink-v4 domain through NeuronSwitch-v1: 2,560 GB/s per chip, 1,280 GB/s of it across servers. Expert parallelism stays on NeuronLink without touching the scale-out network, and the GPT-OSS 120B deployment below keeps it inside one instance. 16 dedicated CC-Cores per chip run the collectives, so communication does not compete with the compute engines.
+- <b>Trainium3 UltraServer</b> keeps 144 chips in one NeuronLink-v4 domain through NeuronSwitch-v1: 2,560 GB/s per chip, 1,280 GB/s of it across servers. Expert parallelism stays on NeuronLink without touching the scale-out network, and the GPT-OSS 120B deployment below keeps it inside one instance. Dedicated CC-Cores run the collectives, so communication does not compete with the compute engines.
 - <b>Jalapeño</b> keeps 128 chips in a local domain and joins 16 racks into a 2,048-chip Ethernet pod. Its links run at 600 GB/s per chip, and its HBM delivers 15.4 TB/s at 700 W (Section 5).
 
 ### Design: GPT-OSS 120B expert parallelism on Trn3
@@ -431,23 +430,23 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 | Batch cannot grow, preemptions | HBM capacity (KV cache) | Paged KV, KV quantization, offload, more chips |
 | Good kernels, bad latency | Queueing delay | Lower utilization target, PD disaggregation |
 
-### Across the chips: same principle, different implementation
+### Same principle, different implementation
 
-| Optimization | NVIDIA | AMD | AWS Trainium | OpenAI Jalapeño |
-| --- | --- | --- | --- | --- |
-| Continuous batching | vLLM, SGLang, TRT-LLM | vLLM, SGLang | vLLM Neuron; SGLang Neuron | Internal |
-| Kernel fusion | Hand-written Triton/CUDA, torch.compile | Triton, Composable Kernel | Neuron compiler plus NKI kernels | Internal |
-| FlashAttention-style tiling | FA3 / FA4-class kernels | Ported Triton and CK kernels | NKI flash attention kernel, SBUF-resident tiles | Internal |
-| Quantization | FP8, MXFP8, MXFP6, MXFP4, NVFP4 | FP8, MXFP8, MXFP6, MXFP4 | FP8, MXFP8, MXFP4 | MXFP4 |
-| Launch overhead fix | CUDA Graphs | HIP Graphs | Whole graph compiled per shape bucket and warmed up before serving | Not disclosed |
-| Paged KV | PagedAttention | PagedAttention | Paged KV cache in fixed-size blocks | Not disclosed |
-| Speculative decoding | EAGLE, MTP heads | EAGLE, MTP heads | EAGLE3 in vLLM Neuron | Not disclosed |
-| PD disaggregation | Dynamo, vLLM, SGLang, llm-d | vLLM, SGLang, llm-d | vLLM Neuron, SGLang Neuron | Not disclosed |
+| Optimization | On GPUs | On Trainium |
+| --- | --- | --- |
+| Continuous batching | Serving engine schedules requests every step | vLLM Neuron, SGLang Neuron |
+| Kernel fusion | Triton or CUDA kernels, torch.compile | Neuron compiler plus NKI kernels |
+| FlashAttention-style tiling | Tiles held in shared memory | NKI flash attention kernel, tiles held in SBUF |
+| Quantization | Low-precision formats in hardware | FP8, MXFP8, MXFP4 |
+| Launch overhead fix | CUDA Graphs or HIP Graphs | Whole graph compiled per shape bucket and warmed up before serving |
+| Paged KV | PagedAttention | Paged KV cache in fixed-size blocks |
+| Speculative decoding | Draft and verify (EAGLE-style) | EAGLE3 in vLLM Neuron |
+| PD disaggregation | Separate prefill and decode pools | vLLM Neuron, SGLang Neuron; KV moved over EFA |
 
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
 
-<b>Takeaway:</b> the <i>principle</i> of an optimization transfers across hardware. The <i>implementation</i> often does not. Port the principle, then re-derive the implementation.
+<b>Takeaway:</b> the <i>principle</i> of an optimization transfers across hardware. The <i>implementation</i> is re-derived for each target: by the compiler for most of the graph, and by hand only for the hottest kernels.
 
 </div>
 
