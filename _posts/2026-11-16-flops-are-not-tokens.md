@@ -130,7 +130,7 @@ Trainium3 runs FP8, MXFP8, and MXFP4 at 2.517 PF, and FP4 pays off where decode 
 
 <b>Prefill</b> reads the whole prompt at once: lots of math, very parallel. <b>Decode</b> writes one token at a time: very little math per step, but every step re-reads the weights (only the active experts in a MoE model) and each sequence's KV cache.
 
-<figure><img src="/assets/img/flops-are-not-tokens/prefill-decode-v3.png" alt="prefill decode v3" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/prefill-decode-v3.svg" alt="prefill decode v3" loading="lazy"></figure>
 
 <b>Deep dive: tensor shapes.</b>
 
@@ -280,9 +280,9 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 
 Matrix units work on fixed-size blocks. If the block has room for 128 rows and you bring 8, you still pay for 128 and get 8. This is a simplified padding model: real utilization also depends on operand orientation, instruction granularity, and how the kernel maps the GEMM onto the hardware.
 
-<figure><img src="/assets/img/flops-are-not-tokens/tile-quantization.png" alt="tile quantization" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/tile-quantization.svg" alt="tile quantization" loading="lazy"></figure>
 
-<figure><img src="/assets/img/flops-are-not-tokens/d4_tile_quantization.png" alt="Tile quantization: decode batch 8 on a 128-row tile does 6.25% useful work; batch 129 drops back to 50.39% because one extra row costs a whole tile." loading="lazy"><figcaption>Tile quantization: decode batch 8 on a 128-row tile does 6.25% useful work; batch 129 drops back to 50.39% because one extra row costs a whole tile.</figcaption></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/d4_tile_quantization.svg" alt="Tile quantization: decode batch 8 on a 128-row tile does 6.25% useful work; batch 129 drops back to 50.39% because one extra row costs a whole tile." loading="lazy"><figcaption>Tile quantization: decode batch 8 on a 128-row tile does 6.25% useful work; batch 129 drops back to 50.39% because one extra row costs a whole tile.</figcaption></figure>
 
 ```txt
 Useful fraction = rows ÷ (ceil(rows ÷ tile) × tile)
@@ -313,7 +313,7 @@ Prefill fills tiles easily (batch × prompt rows). Decode at small batch wastes 
 
 Large models span many chips, and chips must talk every layer. The <b>α–β model</b> gives the cost of each message: sending n bytes takes α + n ÷ β, where α is the fixed startup latency every message pays before any bytes flow and β is the link bandwidth. Small messages are dominated by α, large messages by n ÷ β.
 
-<figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-v4.png" alt="scale hierarchy v4" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-v4.svg" alt="scale hierarchy v4" loading="lazy"></figure>
 
 ```txt
 Message time = α (startup latency) + size ÷ β (bandwidth)
@@ -388,7 +388,7 @@ Interconnect bandwidth can matter more than another few hundred TFLOPS.
 
 A chip is only as fast as the code that runs on it. An excellent chip with a weak compiler loses to weaker hardware with a mature stack.
 
-<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v3.png" alt="software stacks v3" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v3.svg" alt="software stacks v3" loading="lazy"></figure>
 
 <b>Compilers and kernels.</b> Both platforms pair a compiler with hand-written kernels. A compiler fuses most of the graph (torch.compile on GPUs, the Neuron compiler on Trainium), and performance-critical operators are hand-tuned kernels (CUDA or Triton on GPUs, NKI on Trainium). The difference is scheduling: the Neuron compiler also plans every DMA transfer and engine instruction stream, work GPU hardware does at run time:
 
@@ -463,7 +463,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 <b>D. Mixture of Experts.</b> Each layer adds two all-to-alls, and the busiest device sets the pace. A large scale-up domain keeps that traffic off the scale-out network: the GPT-OSS 120B deployment in Section 7 keeps it inside one Trn3 instance, and Jalapeño inside a 128-chip local domain.
 
-<figure><img src="/assets/img/flops-are-not-tokens/moe-layer-v2.png" alt="moe layer v2" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/moe-layer-v2.svg" alt="moe layer v2" loading="lazy"></figure>
 
 <b>E. Speculative decoding.</b> A small draft proposes K tokens and the target model verifies them in one pass, turning 1-row decode into (K+1)-row decode: higher arithmetic intensity, fuller tiles. If each draft token is accepted with probability p, one verification step emits (1 − p^(K+1)) ÷ (1 − p) tokens on average, so the gain grows with p and with how cheap the draft is. Gains shrink at high batch because batching already used the spare compute, so the best K falls as batch size rises.
 
@@ -490,7 +490,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 Prefill wants compute. Decode wants bandwidth, KV capacity, and energy efficiency. Running both on the same chip makes each stall the other. Split them into two pools, and let each pool use the hardware that fits its job.
 
-<figure><img src="/assets/img/flops-are-not-tokens/diagram4-pd-disaggregation.png" alt="diagram4 pd disaggregation" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/diagram4-pd-disaggregation.svg" alt="diagram4 pd disaggregation" loading="lazy"></figure>
 
 TTFT and TPOT get separate targets and separate tuning. And each pool can be sized for its own stage: FLOPS per dollar for prefill, HBM bandwidth per dollar for decode.
 
@@ -531,7 +531,7 @@ Memory check (Little's law)
 Link check             λ · P · KV bytes per token ≤ link bandwidth
 ```
 
-<figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v4.png" alt="capacity planning v4" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v4.svg" alt="capacity planning v4" loading="lazy"></figure>
 
 <figure class="embed"><iframe class="embed-frame" data-embed="fleet-sizer" src="/assets/embeds/fleet-sizer.html" title="Prefill/Decode Fleet Sizer" loading="lazy"></iframe></figure>
 
