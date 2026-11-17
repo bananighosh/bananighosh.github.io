@@ -430,23 +430,23 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 | Batch cannot grow, preemptions | HBM capacity (KV cache) | Paged KV, KV quantization, offload, more chips |
 | Good kernels, bad latency | Queueing delay | Lower utilization target, PD disaggregation |
 
-### Across the chips: same principle, different implementation
+### Same principle, different implementation
 
-| Optimization | NVIDIA | AMD | AWS Trainium | OpenAI Jalapeño |
-| --- | --- | --- | --- | --- |
-| Continuous batching | vLLM, SGLang, TRT-LLM | vLLM, SGLang | vLLM Neuron; SGLang Neuron | Internal |
-| Kernel fusion | Hand-written Triton/CUDA, torch.compile | Triton, Composable Kernel | Neuron compiler plus NKI kernels | Internal |
-| FlashAttention-style tiling | FA3 / FA4-class kernels | Ported Triton and CK kernels | NKI flash attention kernel, SBUF-resident tiles | Internal |
-| Quantization | FP8, MXFP8, MXFP6, MXFP4, NVFP4 | FP8, MXFP8, MXFP6, MXFP4 | FP8, MXFP8, MXFP4 | MXFP8, MXFP4 |
-| Launch overhead fix | CUDA Graphs | HIP Graphs | Whole graph compiled per shape bucket and warmed up before serving | Not disclosed |
-| Paged KV | PagedAttention | PagedAttention | Paged KV cache in fixed-size blocks | Not disclosed |
-| Speculative decoding | EAGLE, MTP heads | EAGLE, MTP heads | EAGLE3 in vLLM Neuron | Not disclosed |
-| PD disaggregation | Dynamo, vLLM, SGLang, llm-d | vLLM, SGLang, llm-d | vLLM Neuron, SGLang Neuron | Not disclosed |
+| Optimization | On GPUs | On Trainium |
+| --- | --- | --- |
+| Continuous batching | Serving engine schedules requests every step | vLLM Neuron, SGLang Neuron |
+| Kernel fusion | Triton or CUDA kernels, torch.compile | Neuron compiler plus NKI kernels |
+| FlashAttention-style tiling | Tiles held in shared memory | NKI flash attention kernel, tiles held in SBUF |
+| Quantization | Low-precision formats in hardware | FP8, MXFP8, MXFP4 |
+| Launch overhead fix | CUDA Graphs or HIP Graphs | Whole graph compiled per shape bucket and warmed up before serving |
+| Paged KV | PagedAttention | Paged KV cache in fixed-size blocks |
+| Speculative decoding | Draft and verify (EAGLE-style) | EAGLE3 in vLLM Neuron |
+| PD disaggregation | Separate prefill and decode pools | vLLM Neuron, SGLang Neuron; KV moved over EFA |
 
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
 
-<b>Takeaway:</b> the <i>principle</i> of an optimization transfers across hardware. The <i>implementation</i> often does not. Port the principle, then re-derive the implementation.
+<b>Takeaway:</b> the <i>principle</i> of an optimization transfers across hardware. The <i>implementation</i> is re-derived for each target: by the compiler for most of the graph, and by hand only for the hottest kernels.
 
 </div>
 
