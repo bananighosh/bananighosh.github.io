@@ -98,7 +98,7 @@ What the reallocation buys, beyond cost:
 
 - <b>Communication that does not steal compute.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. DeepSeek-V3 gave 20 of 132 H800 SMs (15.2%) to all-to-all, and asked hardware vendors to offload communication from the SMs. Trainium3 ships dedicated collective cores (CC-Cores) on every chip.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
-- <b>Larger scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1. <b>Jalapeño</b>: 128 chips per rack over Ethernet, 2,048 per Ethernet pod.
+- <b>Larger scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1. <b>Jalapeño</b>: 128 chips per rack over a local collective network, 2,048 per Ethernet pod.
 - <b>More tokens per watt.</b> Jalapeño has 15.4 TB/s of peak HBM bandwidth on a 700 W chip power budget, 22.0 GB/s per watt. Trainium follows the same path: the Trn3 UltraServer delivers 4x the energy efficiency of the Trn2 UltraServer.
 
 ### The system is the building block
@@ -364,7 +364,7 @@ GPT-OSS 120B is a MoE model with 36 layers, 128 experts per layer, and 4 experts
 
 <b>Decode: one expert per core.</b> With 128 experts and 128 ranks, each NeuronCore holds one expert of every layer, and the expert all-to-all stays inside one instance on NeuronLink. One NKI megakernel runs all 36 decoder layers of a decode step, one kernel call per step instead of one per layer, and the KV cache is FP8. Each of the 16 data-parallel ranks takes 8 sequences, 128 concurrent requests per decode instance; the cap of 8 is 128 × TP ÷ EP.
 
-<b>Prefill: small replicas.</b> Each prefill replica is its own TP4 serving process with EP2, because expert parallelism cannot share data-parallel ranks on the prefill graph.
+<b>Prefill: small replicas.</b> Each prefill replica is its own TP4 server with EP2, because expert parallelism cannot share data-parallel ranks on the prefill graph.
 
 <b>Scaling out: whole instances.</b> More traffic adds instances, not wider expert groups. For production, the tutorial recommends six prefill replicas for each decode instance and 16 replicas on each prefill instance. Three prefill instances and eight decode instances then use every NeuronCore: 48 prefill replicas and 8 decode replicas on 11 instances.
 
