@@ -1,5 +1,5 @@
 ---
-title: "FLOPS Are Not Tokens: A First-Principles Guide to GPUs and ASICs for LLM Inference"
+title: "FLOPS Are Not Tokens: A First-Principles Guide to ASICs for LLM Inference"
 summary: "Why peak FLOPS do not tell you which chip serves your model faster, and how memory, energy, kernels, compilers, networking, and workload shape actually decide inference performance."
 tags: [inference, gpu, asic, trainium]
 math: false
