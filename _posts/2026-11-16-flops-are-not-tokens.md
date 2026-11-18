@@ -17,9 +17,9 @@ math: false
 
 ## 0. What spec sheets do not tell you
 
-AWS Trainium is an ASIC for machine learning training and inference, and its target is performance per dollar of total cost of ownership (TCO).
+ASICs are built for machine learning training and inference at scale, with one goal: high performance per dollar of total cost of ownership (TCO).
 
-To get there, Trainium trades hardware-managed scheduling for components that software controls directly: a software-managed on-chip memory, engines driven by compiled instruction streams, and dedicated cores for collectives. Peak performance comes from models and kernels that fit those components.
+To get there, an ASIC such as AWS Trainium trades hardware-managed scheduling for components that software controls directly: a software-managed on-chip memory, engines driven by compiled instruction streams, and dedicated cores for collectives. Peak performance comes from models and kernels that fit those components.
 
 That is also why peak FLOPS alone does not predict tokens per second. Performance comes out of a chain:
 
