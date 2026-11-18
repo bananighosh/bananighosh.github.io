@@ -98,7 +98,7 @@ What the reallocation buys, beyond cost:
 
 - <b>Communication that does not steal compute.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. DeepSeek-V3 gave 20 of 132 H800 SMs (15.2%) to all-to-all, and asked hardware vendors to offload communication from the SMs. Trainium3 ships dedicated collective cores (CC-Cores) on every chip.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
-- <b>Larger scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1. <b>Jalapeño</b>: 128 chips per rack over a local collective network, 2,048 per Ethernet pod.
+- <b>Larger scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1.
 - <b>More tokens per watt.</b> Jalapeño has 15.4 TB/s of peak HBM bandwidth on a 700 W chip power budget, 22.0 GB/s per watt. Trainium follows the same path: the Trn3 UltraServer delivers 4x the energy efficiency of the Trn2 UltraServer.
 
 ### The system is the building block
