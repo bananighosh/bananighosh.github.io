@@ -622,7 +622,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 <div class="callout callout-purple" markdown="1">
 <span class="callout-icon">🧩</span>
 
-<b>One question to leave you with.</b> On Trainium every decision is explicit, and a good schedule keeps every engine busy. Someone has to choose which matrix stays stationary in a 128×128 systolic array, what lives in 32 MiB of SBUF per core, and when each of the chip's 128 DMA engines fires. The Neuron compiler makes those choices automatically, and NKI gives kernel engineers direct control when they want it. So what does one attention layer look like on Trainium, and where does a custom NKI kernel beat the compiler?
+<b>One question to leave you with.</b> On Trainium every decision is explicit, and a good schedule keeps every engine busy. Someone has to choose which matrix stays stationary in a 128×128 systolic array, what lives in 32 MiB of SBUF per core, and when each of 128 DMA engines fires. The Neuron compiler makes those choices automatically, and NKI gives kernel engineers direct control when they want it. So what does one attention layer look like on Trainium, and where does a custom NKI kernel beat the compiler?
 
 </div>
 
