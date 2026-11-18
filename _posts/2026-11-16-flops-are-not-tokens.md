@@ -56,7 +56,7 @@ This post walks that chain once, with Trainium3 as the worked example, and names
 | Rule | Statement | Section |
 | --- | --- | --- |
 | Roofline | Attainable speed = min(peak compute, arithmetic intensity × memory bandwidth) | 3 |
-| Memory-bandwidth lower bound | Each decode step reads every active weight once, so step time ≥ active weight bytes ÷ bandwidth | 3 |
+| Memory-bandwidth lower bound | Each decode step reads every active weight once, so step time ≥ their bytes ÷ bandwidth | 3 |
 | Weight reuse vs KV reuse | Batching shares weight reads; KV cache reads are per sequence unless sequences share a prefix | 3, 4 |
 | KV size | Bytes per token = 2 × layers × KV heads × head dim × bytes per element | 4 |
 | Data-movement energy | Reading a byte from DRAM costs far more energy than computing on it | 5 |
