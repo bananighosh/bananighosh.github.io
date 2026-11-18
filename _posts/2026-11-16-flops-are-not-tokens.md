@@ -90,7 +90,7 @@ Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a s
 
 ### Why build an ASIC at all
 
-Every accelerator has the same three fixed budgets: <b>die area, power, and the HBM interface</b>. A GPU spends its budget on generality: thousands of thread contexts, register files, hardware schedulers, caches, and number formats some customer somewhere needs. That is insurance against unknown workloads. An ASIC asks what LLM inference actually binds on (bytes moved, on-chip reuse, chip-to-chip traffic), drops the insurance, and spends the budget there.
+Every accelerator has the same three fixed budgets: <b>die area, power, and the HBM interface</b>. A GPU spends its budget on generality: thousands of thread contexts, register files, hardware schedulers, caches, and many number formats. An ASIC spends it on what limits machine learning workloads: bytes moved, on-chip reuse, and chip-to-chip traffic.
 
 Think of a kitchen equipped for any cuisine against one built only for ramen. The ramen kitchen does not have a better chef. It has no idle equipment, and every square meter goes to the steps that slow ramen down.
 
