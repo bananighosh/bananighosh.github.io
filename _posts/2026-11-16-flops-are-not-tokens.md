@@ -49,7 +49,7 @@ This post walks that chain once, with Trainium3 as the worked example, and names
 | <b>NVIDIA</b> B300 | General-purpose GPU | Available | Flexible GPUs on CUDA, with NVLink rack-scale domains |
 | <b>AMD</b> Instinct MI355X | General-purpose GPU | Available | Flexible GPUs on ROCm |
 | <b>AWS Trainium3</b> (Trn3 Gen2 UltraServer, 144 chips) | Hyperscaler ASIC for training and inference | Available on Amazon EC2 | Software-scheduled ASIC: compiler-managed SRAM, dedicated collective cores per chip, and a 144-chip scale-up domain |
-| <b>OpenAI Jalapeño</b> | Inference-only ASIC | OpenAI internal use | Inference ASIC built around OpenAI's own serving patterns: 15.4 TB/s of HBM bandwidth at 700 W |
+| <b>OpenAI Jalapeño</b> | Inference-only ASIC | OpenAI internal use | Inference ASIC built around OpenAI's own serving patterns, with HBM bandwidth per watt as the priority |
 
 ### The ten rules that explain everything below
 
@@ -263,7 +263,7 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 
 |  | NVIDIA | AMD | AWS Trainium | OpenAI Jalapeño |
 | --- | --- | --- | --- | --- |
-| Main lever | Lower-precision formats such as NVFP4: fewer bytes per weight | Advanced process nodes and chiplets: more math per watt | Explicitly scheduled SRAM reuse (compiler or NKI); collectives on dedicated CC-Cores | Bandwidth first: 15.4 TB/s at 700 W |
+| Main lever | Lower-precision formats such as NVFP4: fewer bytes per weight | Advanced process nodes and chiplets: more math per watt | Explicitly scheduled SRAM reuse (compiler or NKI); collectives on dedicated CC-Cores | Bandwidth first: HBM bandwidth per watt |
 
 <b>Reading the table.</b> Jalapeño has 22.0 GB/s of peak HBM bandwidth per watt of chip power. Trn3 UltraServers deliver over 5x the output tokens per megawatt of Trn2 UltraServers at similar latency per user.
 
@@ -343,7 +343,7 @@ Domain size sets how far expert parallelism can spread on the fast fabric. Colle
 | NVIDIA NVL72 systems | One rack of GPUs | NVLink | NCCL on the SMs; in-switch reduction | RDMA |
 | AMD MI355X | One node of GPUs | Infinity Fabric | RCCL on the CUs | RDMA over Ethernet |
 | AWS Trn3 UltraServer (Gen2) | 144 chips: 36 servers × 4 Trainium3 chips, across racks | NeuronLink-v4 through NeuronSwitch-v1: 2,560 GB/s per chip (both directions): 1,024 GB/s within a server, 1,280 GB/s across servers in a rack, 256 GB/s across racks | Neuron collectives on dedicated CC-Cores | EFA, 57,600 Gb/s per UltraServer |
-| OpenAI Jalapeño | 128 chips per rack; 2,048 per pod at 200 GB/s per chip | Ethernet, 600 GB/s per chip within a rack | Not disclosed | Broadcom Tomahawk 6 Ethernet across racks |
+| OpenAI Jalapeño | One rack of chips | Ethernet | Not disclosed | Ethernet across racks |
 
 <b>The design bets:</b>
 
