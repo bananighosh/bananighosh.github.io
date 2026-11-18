@@ -580,7 +580,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 
 <b>OpenAI Jalapeño optimizes watts.</b> At 22.0 GB/s of HBM bandwidth per watt (Section 5), first principles predict high throughput per watt. OpenAI reports 1.5x to 1.9x higher throughput per watt than its tested GPU baselines on selected inference workloads. Watts matter most when data center power, rather than budget, is the limit.
 
-<b>What favors ASICs.</b> In a MoE model, expert parallelism runs an all-to-all every layer, so the scale-up domain shapes cost per token (Section 7). ASIC systems build that domain large: 144 chips on one NeuronLink-v4 domain in the Trn3 Gen2 UltraServer, 128 chips in Jalapeño's local domain.
+<b>What favors ASICs.</b> In a MoE model, expert parallelism runs an all-to-all every layer, so the scale-up domain shapes cost per token (Section 7). ASIC systems build that domain large: 144 chips on one NeuronLink-v4 domain in the Trn3 Gen2 UltraServer.
 
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
