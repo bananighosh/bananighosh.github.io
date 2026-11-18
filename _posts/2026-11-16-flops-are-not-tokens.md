@@ -17,7 +17,7 @@ math: false
 
 ## 0. What spec sheets do not tell you
 
-Every accelerator spec sheet leads with peak FLOPS. A user sees tokens per second (TPS), and an operator pays per token. During decode, the phase that produces every output token, each step re-reads the model weights and every conversation's KV cache from HBM. For long conversations, the math units wait on those bytes at any batch size (Section 4). While decode stays memory-bound, doubling FLOPS at the same bandwidth leaves tokens per second unchanged.
+Every accelerator spec sheet leads with peak FLOPS. A user sees tokens per second (TPS), and an operator pays per token. During decode, the phase that produces every output token, each step re-reads the model weights and every conversation's KV cache from HBM. For long conversations, the math units wait on those bytes at any batch size (Section 4). While decode stays memory-bound, doubling FLOPS at the same bandwidth leaves tokens per second unchanged, and a chip with fewer FLOPS but more bandwidth produces more tokens.
 
 This is the problem AWS Trainium targets. Trainium is an ASIC for large-scale training and inference that spends its die area, power, and HBM interface on what these workloads bind on: moving bytes, reusing data on chip, and moving data between chips. The goal is performance per dollar of total cost of ownership (TCO), which for production inference means cost per token.
 
