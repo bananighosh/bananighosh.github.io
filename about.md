@@ -14,7 +14,7 @@ permalink: /about/
   </div>
 </div>
 
-I work on ML performance for AWS Trainium, focused on distributed training and inference on Trn3 and Trn4. Before that I optimized agentic LLM pipelines for Amazon Quick, and earlier I was a seasoned engineer at Adobe building large-scale distributed systems. I also contribute to vLLM. This blog is where I work through GPU and accelerator performance from first principles.
+I make LLM training and inference faster on AWS Trainium, on Trn3 and Trn4. In vLLM, I built kernel auto-tuning that sped up a GPU inference path by up to 2.46x on NVIDIA B200, and I am building adaptive-k speculative decoding for MoE models. At Amazon Quick, I cut model invocations by 25% and p95 latency by 20% for 500K+ users. Before that, I was a seasoned engineer at Adobe building large-scale distributed systems.
 
 <p class="profile-links"><a href="https://github.com/bananighosh">GitHub</a> · <a href="https://www.linkedin.com/in/banani-ghosh/">LinkedIn</a></p>
 
