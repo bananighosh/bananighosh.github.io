@@ -17,7 +17,7 @@ math: false
 
 ## 0. What spec sheets do not tell you
 
-ASICs are built for machine learning training and inference at scale, with one goal: high performance per dollar of total cost of ownership (TCO).
+ASICs are built to be highly efficient across a wide range of machine learning workloads, delivering high performance per dollar of total cost of ownership (TCO).
 
 AWS Trainium is one of them, and this post uses Trainium3 as its worked example.
 
