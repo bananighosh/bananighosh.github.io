@@ -90,11 +90,11 @@ Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a s
 
 ### Why build an ASIC at all
 
-Every accelerator has the same three fixed budgets: <b>die area, power, and the HBM interface</b>. A GPU spends its budget on generality: thousands of thread contexts, register files, hardware schedulers, caches, and many number formats. An ASIC spends it on what limits machine learning workloads: bytes moved, on-chip reuse, and chip-to-chip traffic.
+Every accelerator has the same three fixed budgets: <b>die area, power, and the HBM interface</b>. A GPU spreads its budget across thousands of thread contexts, register files, hardware schedulers, caches, and many number formats. An ASIC spends it on what limits machine learning workloads: bytes moved, on-chip reuse, and chip-to-chip traffic.
 
 Think of a kitchen equipped for any cuisine against one built only for ramen. The ramen kitchen does not have a better chef. It has no idle equipment, and every square meter goes to the steps that slow ramen down.
 
-What the reallocation buys, beyond cost:
+What this buys, beyond cost:
 
 - <b>Communication that does not steal compute.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. DeepSeek-V3 gave 20 of 132 H800 SMs (15.2%) to all-to-all, and asked hardware vendors to offload communication from the SMs. Trainium3 ships dedicated collective cores (CC-Cores) on every chip.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
