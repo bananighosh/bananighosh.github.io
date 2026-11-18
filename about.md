@@ -14,7 +14,7 @@ permalink: /about/
   </div>
 </div>
 
-My passion is squeezing performance out of ML systems. I work on distributed training and inference performance on AWS Trainium (Trn3 and Trn4), contribute to vLLM, and write here about GPUs and AI accelerators from first principles. Before that I optimized agentic LLM pipelines for Amazon Quick, and earlier I was a seasoned engineer at Adobe building large-scale distributed systems.
+I work on ML performance for AWS Trainium, focused on distributed training and inference on Trn3 and Trn4. Before that I optimized agentic LLM pipelines for Amazon Quick, and earlier I was a seasoned engineer at Adobe building large-scale distributed systems. I also contribute to vLLM. This blog is where I work through GPU and accelerator performance from first principles.
 
 <p class="profile-links"><a href="https://github.com/bananighosh">GitHub</a> · <a href="https://www.linkedin.com/in/banani-ghosh/">LinkedIn</a></p>
 
