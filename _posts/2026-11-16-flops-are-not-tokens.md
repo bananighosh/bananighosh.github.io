@@ -423,7 +423,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 | Symptom | Bottleneck | First fixes |
 | --- | --- | --- |
 | HBM bandwidth near peak, matrix units idle | Memory bandwidth (memory-bound) | Weight and KV quantization, fusion, larger batch |
-| Matrix units saturated | Compute (compute-bound) | Lower precision where the hardware runs it faster, better tile shapes |
+| Matrix units saturated | Compute (compute-bound) | Lower precision, better tile shapes |
 | Healthy utilization counters, low useful work | Tile quantization | Shape buckets at tile multiples, speculative decoding |
 | Many tiny kernels, gaps on the timeline | Kernel launch overhead | Graph capture or static compilation, fusion |
 | Chips waiting on each other | Inter-chip communication overhead | Lower tensor-parallel degree, one-shot all-reduce, overlap |
