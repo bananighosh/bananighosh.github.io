@@ -19,7 +19,7 @@ math: false
 
 Every accelerator spec sheet leads with peak FLOPS. A user sees tokens per second (TPS), and an operator pays per token. During decode, the phase that produces every output token after the first, each step re-reads the model's active weights and the KV cache of every sequence in the batch from HBM. For long contexts, the math units of a model like Llama 3.3 70B wait on those bytes at any batch size. While decode stays memory-bound, tokens per second follow bandwidth, not FLOPS: doubling FLOPS at the same bandwidth leaves them unchanged.
 
-ASICs are built around this. An ASIC spends its die area, power, and HBM interface on moving bytes, reusing data on chip, and moving data between chips, rather than on peak FLOPS. Because decode throughput follows bandwidth, an ASIC can deliver the same tokens per second without leading on peak FLOPS, and the saving shows up as a lower total cost of ownership (TCO) and, for production inference, a lower cost per token.
+ASICs are built around this idea: spend the silicon on moving bytes, not on peak FLOPS. The payoff is total cost of ownership (TCO), measured one token at a time.
 
 <p>
 <b>The headline numbers do not show which of those choices matter.</b> 
