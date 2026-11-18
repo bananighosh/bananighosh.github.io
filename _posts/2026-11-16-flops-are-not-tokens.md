@@ -19,7 +19,7 @@ math: false
 
 Every accelerator spec sheet leads with peak FLOPS. A user sees tokens per second (TPS), and an operator pays per token. During decode, the phase that produces every output token, each step re-reads the model weights and every conversation's KV cache from HBM. For long conversations, the math units wait on those bytes at any batch size (Section 4). While decode stays memory-bound, doubling FLOPS at the same bandwidth leaves tokens per second unchanged, and a chip with fewer FLOPS but more bandwidth produces more tokens.
 
-This is the problem AWS Trainium targets. Trainium is an ASIC for large-scale training and inference that spends its die area, power, and HBM interface on what these workloads bind on: moving bytes, reusing data on chip, and moving data between chips. The goal is performance per dollar of total cost of ownership (TCO), which for production inference means cost per token.
+An ASIC spends its die area, power, and HBM interface where its workloads bind, not on hardware they never use. AWS Trainium, an ASIC for large-scale training and inference, spends them on moving bytes, reusing data on chip, and moving data between chips. The payoff is more delivered tokens per dollar and per watt: a lower total cost of ownership (TCO), and for production inference, a lower cost per token.
 
 <p>
 <b>The headline numbers do not show which of those choices matter.</b> 
