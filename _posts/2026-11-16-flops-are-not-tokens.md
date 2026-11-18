@@ -435,8 +435,8 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 | Optimization | On GPUs | On Trainium |
 | --- | --- | --- |
 | Continuous batching | Serving engine schedules requests every step | vLLM Neuron, SGLang Neuron |
-| Kernel fusion | Triton or CUDA kernels, torch.compile | Neuron compiler plus NKI kernels |
-| FlashAttention-style tiling | Tiles held in shared memory | NKI flash attention kernel, tiles held in SBUF |
+| Kernel fusion | Triton, CUDA, or ROCm kernels; torch.compile | Neuron compiler plus NKI kernels |
+| FlashAttention-style tiling | Tiles held in on-chip shared memory | NKI flash attention kernel, tiles held in SBUF |
 | Quantization | Low-precision formats in hardware | FP8, MXFP8, MXFP4 |
 | Launch overhead fix | CUDA Graphs or HIP Graphs | Whole graph compiled per shape bucket and warmed up before serving |
 | Paged KV | PagedAttention | Paged KV cache in fixed-size blocks |
