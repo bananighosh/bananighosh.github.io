@@ -17,15 +17,11 @@ math: false
 
 ## 0. What spec sheets do not tell you
 
-Every accelerator spec sheet leads with peak FLOPS. Users see tokens per second, and operators pay per token. Between the two sits decode, which generates every token after the first. Each decode step re-reads the model weights and the KV cache from HBM, so for long conversations the math units mostly wait on memory. Double the FLOPS without more bandwidth, and decode barely moves.
+AWS Trainium is an ASIC for machine learning training and inference, and its target is performance per dollar of total cost of ownership (TCO).
 
-ASICs are built around this idea: spend the silicon on moving bytes, not on peak FLOPS. The payoff is total cost of ownership (TCO), measured one token at a time.
+To get there, Trainium trades hardware-managed scheduling for components that software controls directly: a software-managed on-chip memory, engines driven by compiled instruction streams, and dedicated cores for collectives. Peak performance comes from models and kernels that fit those components.
 
-<p>
-<b>The headline numbers do not show which of those choices matter.</b> 
-</p>
-
-Performance comes out of a chain:
+That is also why peak FLOPS alone does not predict tokens per second. Performance comes out of a chain:
 
 ```txt
 Model shape → workload shape → arithmetic intensity → bytes moved → energy per byte
