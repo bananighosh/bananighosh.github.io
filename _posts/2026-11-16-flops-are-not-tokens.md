@@ -17,7 +17,7 @@ math: false
 
 ## 0. What spec sheets do not tell you
 
-Every accelerator spec sheet leads with peak FLOPS. A user sees tokens per second (TPS), and an operator pays per token. During decode, the phase that produces every output token after the first, each step re-reads the model's active weights and the KV cache of every sequence in the batch from HBM. For long contexts, the math units of a model like Llama 3.3 70B wait on those bytes at any batch size. While decode stays memory-bound, tokens per second follow bandwidth, not FLOPS: doubling FLOPS at the same bandwidth leaves them unchanged.
+Every accelerator spec sheet leads with peak FLOPS. Users see tokens per second, and operators pay per token. Between the two sits decode, which generates every token after the first. Each decode step re-reads the model weights and the KV cache from HBM, so for long conversations the math units mostly wait on memory. Double the FLOPS without more bandwidth, and decode barely moves.
 
 ASICs are built around this idea: spend the silicon on moving bytes, not on peak FLOPS. The payoff is total cost of ownership (TCO), measured one token at a time.
 
