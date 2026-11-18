@@ -317,7 +317,7 @@ Large models span many chips, and chips must talk every layer. The <b>α–β mo
 ```txt
 Message time = α (startup latency) + size ÷ β (bandwidth)
 
-Tensor-parallel decode, running example on one 4-chip Trn3 server (TP4), 32 sequences, BF16 activations:
+Tensor-parallel decode, running example on 8 chips, 32 sequences, BF16 activations:
   one all-reduce = 32 × 8,192 × 2 bytes = 524,288 bytes   → time dominated by α
   2 all-reduces per layer × 80 layers = 160 per decode step
   → every generated token pays the fabric's startup latency 160 times
@@ -378,7 +378,7 @@ GPT-OSS 120B is a MoE model with 36 layers, 128 experts per layer, and 4 experts
 </div>
 
 <div class="pullquote" markdown="1">
-Interconnect latency and domain size can matter more than another few hundred TFLOPS.
+Interconnect bandwidth can matter more than another few hundred TFLOPS.
 </div>
 
 ---
@@ -558,7 +558,7 @@ For a Trn3 Gen2 UltraServer the denominator is 705.6 TB/s per system. In product
 <b>Sizing the decode pool.</b> In the 1K in / 8K out shape, decode tokens outnumber prefill tokens 8 to 1, so the decode pool is most of the fleet. Three numbers size it:
 
 - <b>HBM bandwidth per dollar</b> sets cost per output token, because bytes per second generate decode tokens.
-- <b>HBM capacity</b> sets concurrent conversations: 334 per Trn3 server at this shape's full 9,216-token context.
+- <b>HBM capacity</b> sets concurrent conversations: 753 per Trn3 server at 4K (Section 4).
 - <b>Disaggregation</b> (Section 11) lets the pool grow apart from prefill. vLLM Neuron runs prefill and decode as separate Trainium pools and moves the KV cache between them over EFA.
 
 <div class="callout callout-gray" markdown="1">
