@@ -19,16 +19,16 @@ math: false
 
 ASICs are built for machine learning training and inference at scale, with one goal: high performance per dollar of total cost of ownership (TCO).
 
-To get there, an ASIC such as AWS Trainium trades hardware-managed scheduling for components that software controls directly: a software-managed on-chip memory, engines driven by compiled instruction streams, and dedicated cores for collectives. Peak performance comes from models and kernels that fit those components.
+AWS Trainium is one of them, and this post uses Trainium3 as its worked example.
 
-That is also why peak FLOPS alone does not predict tokens per second. Performance comes out of a chain:
+Peak FLOPS alone does not predict tokens per second. Performance comes out of a chain:
 
 ```txt
 Model shape → workload shape → arithmetic intensity → bytes moved → energy per byte
 → compute → communication → scheduling → latency / throughput / cost per token
 ```
 
-This post walks that chain once, with Trainium3 as the worked example, and names the limit at every link. By the end one can reason from first principles about where an ASIC gains, before looking at a benchmark.
+This post walks that chain once and names the limit at every link. By the end one can reason from first principles about where an ASIC gains, before looking at a benchmark.
 
 <div class="pullquote" markdown="1">
 <b>The recurring theme:</b> do not optimize for the chip. Identify what prevents the chip from doing useful work, and remove that.
