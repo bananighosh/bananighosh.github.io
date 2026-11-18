@@ -30,6 +30,12 @@ Distributed training and inference performance on Trn3 and Trn4.
 
 Optimized agentic execution graphs for 500K+ users (25% fewer model invocations, 20% lower p95 latency, 2x end-to-end throughput) and built complexity-aware routing across model tiers.
 
+### Open-source contributor, vLLM
+<p class="meta">vLLM · Ongoing</p>
+
+- Added config-driven auto-tuning and benchmark tooling to a GPU inference kernel path, improving it by up to 2.46x on NVIDIA B200.
+- Utility-driven adaptive-k speculative decoding for MoE inference, selecting the draft-token budget per request to balance acceptance against verification cost, on NVIDIA B200 and GB10.
+
 ### Machine Learning Engineering Intern
 <p class="meta">Root Access · New York, NY · Jan 2025 – May 2025</p>
 
@@ -46,12 +52,6 @@ Fine-tuned Llama 3 8B with QLoRA into an assistant for firmware engineers, with 
 <p class="meta">Aricent · Gurugram, India · Jan 2014 – May 2015</p>
 
 C and C++ development on a security gateway controller and a TCP performance-enhancing proxy.
-
-## Open source
-
-### vLLM
-- Added config-driven auto-tuning and benchmark tooling to a GPU inference kernel path, improving it by up to 2.46x on NVIDIA B200.
-- Utility-driven adaptive-k speculative decoding for MoE inference, selecting the draft-token budget per request to balance acceptance against verification cost, on NVIDIA B200 and GB10.
 
 ## Education
 
