@@ -42,8 +42,6 @@ This post walks that chain once, with Trainium3 as the worked example, and names
 
 ## 1. The chips, and the ten rules
 
-### The chips in this post
-
 | Chip | Type | Availability | Design focus |
 | --- | --- | --- | --- |
 | <b>NVIDIA</b> B300 | General-purpose GPU | Available | Flexible GPUs on CUDA, with NVLink rack-scale domains |
