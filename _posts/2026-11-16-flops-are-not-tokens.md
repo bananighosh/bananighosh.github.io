@@ -74,7 +74,7 @@ A GPU is thousands of programmable workers sharing caches the hardware manages. 
 
 Both designs have software-managed SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is what sits behind it. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp.
 
-Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a schedule built ahead of time by the Neuron compiler or an NKI kernel. That schedule keeps every engine fed, and serving stacks compile one schedule per shape bucket. Trainium3 adds dynamic shapes and control flow to the NeuronCore-v4 ISA, which can reduce the number of buckets. GPUs also move data under software control, through the Tensor Memory Accelerator (TMA, since Hopper) and asynchronous copies, so the difference is the division of work: on a GPU, hardware caches and warp schedulers handle at run time what software leaves unplanned; on Trainium, the compiler or kernel plans the movement ahead of time.
+Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a schedule built ahead of time by the Neuron compiler or an NKI (Neuron Kernel Interface) kernel. That schedule keeps every engine fed, and serving stacks compile one schedule per shape bucket. Trainium3 adds dynamic shapes and control flow to the NeuronCore-v4 ISA, which can reduce the number of buckets. GPUs also move data under software control, through the Tensor Memory Accelerator (TMA, since Hopper) and asynchronous copies, so the difference is the division of work: on a GPU, hardware caches and warp schedulers handle at run time what software leaves unplanned; on Trainium, the compiler or kernel plans the movement ahead of time.
 
 ### Across the chips: anatomy
 
@@ -83,7 +83,7 @@ Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a s
 | Compute units | Many streaming multiprocessors (NVIDIA) or compute units (AMD), each with matrix cores and SIMD lanes | 8 NeuronCore-v4, each a 128×128 systolic array plus vector, scalar, and GpSimd engines | Not disclosed |
 | On-chip memory | Small shared memory per SM or CU, plus hardware-managed caches | 256 MiB software-managed SBUF (32 MiB per core) | Not disclosed |
 | Control | Hardware warp (NVIDIA) or wavefront (AMD) schedulers | Per-engine instruction streams built by the compiler or NKI, synchronized by hardware semaphores; ISA extensions for dynamic shapes and control flow | Not disclosed |
-| Collectives | NCCL or RCCL, by default as kernels on the SMs or CUs | Neuron collectives on dedicated CC-Cores | Not disclosed |
+| Collectives | NCCL or RCCL, by default as kernels on the SMs or CUs | Neuron collectives on dedicated collective cores (CC-Cores) | Not disclosed |
 | Low-precision formats (all also run BF16 and FP16) | FP8 plus several microscaled FP8, FP6, and FP4 formats | FP8, MXFP8, MXFP4 | MXFP8, MXFP4 |
 
 ### Why build an ASIC at all
@@ -94,7 +94,7 @@ Think of a kitchen equipped for any cuisine against one built only for ramen. Th
 
 What this buys, beyond cost:
 
-- <b>Collectives on dedicated cores.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. Trainium3 ships dedicated collective cores (CC-Cores) on every chip.
+- <b>Collectives on dedicated cores.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. Trainium3 ships dedicated CC-Cores on every chip.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
 - <b>Large scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1.
 - <b>Tokens per watt across generations.</b> The Trn3 UltraServer delivers 4x better performance per watt than the Trn2 UltraServer.
@@ -212,7 +212,7 @@ Every value sits below the Trainium3 ridge point (513.67 FLOP/B). <b>At 8K conte
 
 ### How many conversations fit
 
-FP8 stores each of Llama 3.3 70B's 70.55 billion parameters in 8 bits, one byte, so the weights take 70.55 GB. The rest of the HBM holds the KV cache, minus the activation and runtime buffers the serving engine reserves, so the counts below are upper bounds. Decode activations themselves are small: one MLP intermediate for 753 sequences is 753 × 28,672 × 2 bytes, 43.2 MB.
+FP8 stores each of Llama 3.3 70B's 70.55 billion parameters in 8 bits, one byte, so the weights take 70.55 GB. The rest of the HBM holds the KV cache, minus the activation and runtime buffers the serving engine reserves, so the counts below are upper bounds. Decode activations themselves are small: one MLP intermediate for the 753 4K-token sequences one Trn3 server holds (below) is 753 × 28,672 × 2 bytes, 43.2 MB.
 
 |  | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
@@ -397,7 +397,7 @@ Between NVIDIA and AMD the names differ but the concepts map closely; porting us
 
 <b>From GPU to Trainium, the execution model changes:</b> Trainium replaces warps and the hardware warp scheduler with compiled instruction streams: each engine runs its own stream asynchronously, and the compiler inserts semaphore synchronization between them. Occupancy gives way to overlap: the instruction streams must keep DMA transfers and the Tensor, Vector, Scalar, and GpSimd engines busy at the same time. Coalescing survives as DMA efficiency: a transfer needs at least 2 KiB of contiguous data per partition to approach peak bandwidth, and one large DMA beats many small ones. On top of that, you reason about SBUF partition layout and which operand stays stationary in the systolic array.
 
-<b>Custom kernels exist on both sides.</b> On Trainium they are written in NKI (Neuron Kernel Interface), a bare-metal kernel language, written in Python, that exposes the NeuronCore ISA directly through <code>nki.isa</code>. AWS publishes the NKI Library, an open-source set of pre-built kernels optimized for Neuron devices, and NKI kernels drop into PyTorch and JAX models as custom operators. The difference from CUDA is what you control: no warps to schedule, but explicit tiles, SRAM placement, and DMA transfers.
+<b>Custom kernels exist on both sides.</b> On Trainium they are written in NKI, a bare-metal kernel language, written in Python, that exposes the NeuronCore ISA directly through <code>nki.isa</code>. AWS publishes the NKI Library, an open-source set of pre-built kernels optimized for Neuron devices, and NKI kernels drop into PyTorch and JAX models as custom operators. The difference from CUDA is what you control: no warps to schedule, but explicit tiles, SRAM placement, and DMA transfers.
 
 ### Across the chips: the kernel level
 
@@ -576,7 +576,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 
 <b>AWS Trainium3: cost per token.</b> Decode cost tracks the price of HBM bandwidth (Section 12), and the Trn3 Gen2 UltraServer delivers 705.6 TB/s of HBM bandwidth per system. Anthropic, Karakuri, Metagenomi, NetoAI, Ricoh, and Splash Music report up to 50% lower training and inference costs on Trainium, and on Amazon Bedrock, Trainium3 delivers up to 3x faster performance than Trainium2. At scale, Anthropic's Project Rainier runs on nearly 500,000 Trainium2 chips.
 
-<b>What favors ASICs.</b> In a MoE model, expert parallelism runs an all-to-all every layer, so the scale-up domain shapes cost per token (Section 7). ASIC systems build that domain large: 144 chips on one NeuronLink-v4 domain in the Trn3 Gen2 UltraServer.
+<b>What favors ASICs.</b> In a MoE model, expert parallelism runs an all-to-all every layer, so the scale-up domain shapes cost per token (Section 7). Trainium builds that domain large: 144 chips on one NeuronLink-v4 domain in the Trn3 Gen2 UltraServer.
 
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
