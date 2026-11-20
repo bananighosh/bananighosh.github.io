@@ -288,7 +288,7 @@ batch 128, tile 128 → 100%
 batch 129, tile 128 → 50.39%   (one extra row costs a whole tile)
 ```
 
-Prefill fills tiles easily (batch × prompt rows). Decode at small batch wastes most of each tile, on top of being memory-bound. Utilization counters can look healthy while most of the work is padding. At small batch the bandwidth limit binds first; tile quantization starts to cost real throughput as batch grows toward the ridge.
+The example is generic: on Trainium, which operand stays stationary in the 128×128 array is a choice the Neuron compiler or an NKI kernel makes for each matmul. Prefill fills tiles easily (batch × prompt rows). Decode at small batch wastes most of each tile, on top of being memory-bound. Utilization counters can look healthy while most of the work is padding. At small batch the bandwidth limit binds first; tile quantization starts to cost real throughput as batch grows toward the ridge.
 
 ### Across the chips: matrix unit granularity
 
