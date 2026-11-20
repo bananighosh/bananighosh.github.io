@@ -97,7 +97,7 @@ What this buys, beyond cost:
 - <b>Communication that does not steal compute.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. DeepSeek-V3 gave 20 of 132 H800 SMs (15.2%) to all-to-all, and asked hardware vendors to offload communication from the SMs. Trainium3 ships dedicated collective cores (CC-Cores) on every chip.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
 - <b>Larger scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1.
-- <b>More tokens per watt.</b> Jalapeño has 15.4 TB/s of peak HBM bandwidth on a 700 W chip power budget, 22.0 GB/s per watt. Trainium follows the same path: the Trn3 UltraServer delivers 4x the energy efficiency of the Trn2 UltraServer.
+- <b>More tokens per watt.</b> The Trn3 UltraServer delivers 4x the energy efficiency of the Trn2 UltraServer.
 
 ### The system is the building block
 
@@ -263,7 +263,7 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 | --- | --- | --- | --- | --- |
 | Main lever | Lower-precision formats such as NVFP4: fewer bytes per weight | Advanced process nodes and chiplets: more math per watt | Explicitly scheduled SRAM reuse (compiler or NKI); collectives on dedicated CC-Cores | Bandwidth first: HBM bandwidth per watt |
 
-<b>Reading the table.</b> Jalapeño has 22.0 GB/s of peak HBM bandwidth per watt of chip power. Trn3 UltraServers deliver over 5x the output tokens per megawatt of Trn2 UltraServers at similar latency per user.
+<b>Reading the table.</b> Trn3 UltraServers deliver over 5x the output tokens per megawatt of Trn2 UltraServers at similar latency per user.
 
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
@@ -348,7 +348,7 @@ Domain size sets how far expert parallelism can spread on the fast fabric. Colle
 - <b>NVIDIA</b> joins a rack of GPUs over NVLink, and the switches perform part of each reduction themselves, so collectives spend less time on the GPUs.
 - <b>AMD</b> joins the GPUs in a node over Infinity Fabric, and expert parallelism beyond the node runs over the RDMA Ethernet scale-out network.
 - <b>Trainium3 UltraServer</b> keeps 144 chips in one NeuronLink-v4 domain through NeuronSwitch-v1: 2,560 GB/s per chip, 1,280 GB/s of it across servers in a rack. Expert parallelism stays on NeuronLink without touching the scale-out network, and the GPT-OSS 120B deployment below keeps it inside one instance. Dedicated CC-Cores run the collectives, so collectives do not occupy the compute engines.
-- <b>Jalapeño</b> keeps 128 chips in a local domain and joins 16 racks into a 2,048-chip Ethernet pod. Its links run at 600 GB/s per chip, and its HBM delivers 15.4 TB/s at 700 W (Section 5).
+- <b>Jalapeño</b> joins its chips in rack-scale Ethernet domains.
 
 ### Design: GPT-OSS 120B expert parallelism on Trn3
 
