@@ -625,7 +625,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 
 ---
 
-<i>Views are my own. This post explains LLM inference on ASICs from first principles, and every figure in it comes from the public sources cited below.</i>
+<i>Views are my own. This post explains LLM inference on ASICs from first principles, and every number in it comes from the public sources cited below or is calculated from them.</i>
 
 ---
 
