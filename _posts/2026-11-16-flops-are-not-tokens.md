@@ -19,7 +19,7 @@ math: false
 
 Every accelerator spec sheet leads with peak FLOPS. A user sees tokens per second (TPS), and an operator pays per token. During decode, the phase that produces every output token after the first, each step re-reads the model weights and every conversation's KV cache from HBM. For long conversations, the math units wait on those bytes at any batch size. While decode stays memory-bound, doubling FLOPS at the same bandwidth leaves tokens per second unchanged.
 
-ASICs are built to be highly efficient across a wide range of machine learning workloads, delivering high performance per dollar of total cost of ownership (TCO).
+On AWS Trainium, an ASIC for training and inference, the path from FLOPS to tokens runs through NeuronCore compute, SBUF data reuse, DMA scheduling, and NeuronLink communication. How these components work together determines how effectively the hardware's compute capacity translates into inference throughput.
 
 <p>
 <b>The headline numbers do not show which of those choices matter.</b> 
