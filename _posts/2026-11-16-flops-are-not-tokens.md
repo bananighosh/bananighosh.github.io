@@ -22,7 +22,7 @@ Every accelerator spec sheet leads with peak FLOPS. A user sees tokens per secon
 On AWS Trainium, an ASIC for training and inference, the path from FLOPS to tokens runs through NeuronCore compute, SBUF data reuse, DMA scheduling, and NeuronLink communication. How these components work together determines how effectively the hardware's compute capacity translates into inference throughput.
 
 <p>
-<b>The headline numbers do not show which of those choices matter.</b> 
+<b>The headline numbers do not show which of those components set tokens per second.</b> 
 </p>
 
 Performance comes out of a chain:
@@ -74,7 +74,7 @@ A GPU is thousands of programmable workers sharing caches the hardware manages. 
 
 Both designs have software-managed SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is what sits behind it. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp.
 
-Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a schedule built ahead of time by the Neuron compiler or an NKI kernel. When the work is predictable, that schedule keeps every engine fed, and serving stacks compile one schedule per shape bucket to keep it that way. Trainium3 adds dynamic shapes and control flow to the NeuronCore-v4 ISA, which can reduce the number of buckets. GPUs also move data under software control, through the Tensor Memory Accelerator (TMA, since Hopper) and asynchronous copies, so the difference is the division of work: on a GPU, hardware caches and warp schedulers handle at run time what software leaves unplanned; on Trainium, the compiler or kernel plans the movement ahead of time.
+Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a schedule built ahead of time by the Neuron compiler or an NKI kernel. That schedule keeps every engine fed, and serving stacks compile one schedule per shape bucket. Trainium3 adds dynamic shapes and control flow to the NeuronCore-v4 ISA, which can reduce the number of buckets. GPUs also move data under software control, through the Tensor Memory Accelerator (TMA, since Hopper) and asynchronous copies, so the difference is the division of work: on a GPU, hardware caches and warp schedulers handle at run time what software leaves unplanned; on Trainium, the compiler or kernel plans the movement ahead of time.
 
 ### Across the chips: anatomy
 
@@ -97,7 +97,7 @@ What this buys, beyond cost:
 - <b>Communication that does not steal compute.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. DeepSeek-V3 dedicated part of its GPUs' SMs to all-to-all, and asked hardware vendors to offload communication from the SMs. Trainium3 ships dedicated collective cores (CC-Cores) on every chip.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
 - <b>Larger scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1.
-- <b>More tokens per watt.</b> The Trn3 UltraServer delivers 4x the energy efficiency of the Trn2 UltraServer.
+- <b>More tokens per watt.</b> The Trn3 UltraServer delivers 4x better performance per watt than the Trn2 UltraServer.
 
 ### The system is the building block
 
@@ -263,7 +263,7 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 | --- | --- | --- | --- | --- |
 | Main lever | Lower-precision formats such as NVFP4: fewer bytes per weight | Advanced process nodes and chiplets: more math per watt | Explicitly scheduled SRAM reuse (compiler or NKI); collectives on dedicated CC-Cores | Bandwidth first: HBM bandwidth per watt |
 
-<b>Reading the table.</b> Trn3 UltraServers deliver over 5x the output tokens per megawatt of Trn2 UltraServers at similar latency per user.
+<b>Across generations.</b> Trn3 UltraServers deliver over 5x the output tokens per megawatt of Trn2 UltraServers at similar latency per user.
 
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
@@ -338,7 +338,7 @@ Domain size sets how far expert parallelism can spread on the fast fabric. Colle
 
 | Platform | Fast domain | Link per chip | Who runs collectives | Beyond the domain |
 | --- | --- | --- | --- | --- |
-| NVIDIA NVL72 systems | One rack of GPUs | NVLink | NCCL on the SMs; in-switch reduction | RDMA |
+| NVIDIA rack-scale NVLink systems | One rack of GPUs | NVLink | NCCL on the SMs; in-switch reduction | RDMA |
 | AMD MI355X | One node of GPUs | Infinity Fabric | RCCL on the CUs | RDMA over Ethernet |
 | AWS Trn3 UltraServer (Gen2) | 144 chips: 36 servers × 4 Trainium3 chips, across racks | NeuronLink-v4 through NeuronSwitch-v1: 2,560 GB/s per chip (both directions): 1,024 GB/s within a server, 1,280 GB/s across servers in a rack, 256 GB/s across racks | Neuron collectives on dedicated CC-Cores | EFA, 57,600 Gb/s per UltraServer |
 | OpenAI Jalapeño | One rack of chips | Ethernet | Not disclosed | Ethernet across racks |
@@ -347,7 +347,7 @@ Domain size sets how far expert parallelism can spread on the fast fabric. Colle
 
 - <b>NVIDIA</b> joins a rack of GPUs over NVLink, and the switches perform part of each reduction themselves, so collectives spend less time on the GPUs.
 - <b>AMD</b> joins the GPUs in a node over Infinity Fabric, and expert parallelism beyond the node runs over the RDMA Ethernet scale-out network.
-- <b>Trainium3 UltraServer</b> keeps 144 chips in one NeuronLink-v4 domain through NeuronSwitch-v1: 2,560 GB/s per chip, 1,280 GB/s of it across servers in a rack. Expert parallelism stays on NeuronLink without touching the scale-out network, and the GPT-OSS 120B deployment below keeps it inside one instance. Dedicated CC-Cores run the collectives, so collectives do not occupy the compute engines.
+- <b>Trainium3 UltraServer</b> keeps 144 chips in one NeuronLink-v4 domain through NeuronSwitch-v1: 2,560 GB/s per chip, 1,280 GB/s of it across servers in a rack. Expert parallelism stays on NeuronLink without touching the scale-out network. Dedicated CC-Cores run the collectives, so collectives do not occupy the compute engines.
 - <b>Jalapeño</b> joins its chips in rack-scale Ethernet domains.
 
 ### Design: GPT-OSS 120B expert parallelism on Trn3
@@ -366,7 +366,7 @@ GPT-OSS 120B is a MoE model with 36 layers, 128 experts per layer, and 4 experts
 
 <b>Scaling out: whole instances.</b> More traffic adds instances, not wider expert groups. For production, the tutorial recommends six prefill replicas for each decode instance and 16 replicas on each prefill instance. Three prefill instances and eight decode instances then use every NeuronCore: 48 prefill replicas and 8 decode servers on 11 instances.
 
-<b>What the GPU design does differently.</b> A GPU rack-scale NVLink domain is one flat tier: every GPU reaches every other through the switches at the same bandwidth, so expert placement inside it needs no tiering, and the all-to-all runs by default on the same SMs as the math (Section 2). On a Trn3 UltraServer the tiers make placement a design decision, and the CC-Cores run the all-to-all while the NeuronCores compute.
+<b>Placement on Trainium.</b> A Trn3 UltraServer gives expert placement locality to use: experts that exchange the most traffic can share a server's 1,024 GB/s switch tier, and the CC-Cores run the all-to-all while the NeuronCores compute.
 
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
@@ -395,7 +395,7 @@ Model graph → compiler IR → fusion → tiling → SRAM placement → engine 
 
 Between NVIDIA and AMD the names differ but the concepts map closely; porting usually fails on tile shapes and wave-size assumptions, not syntax.
 
-<b>The real jump is GPU to ASIC:</b> Trainium replaces warps and the hardware warp scheduler with compiled instruction streams: each engine runs its own stream asynchronously, and the compiler inserts semaphore synchronization between them. Occupancy gives way to overlap: the instruction streams must keep DMA transfers and the Tensor, Vector, Scalar, and GpSimd engines busy at the same time. Coalescing survives as DMA efficiency: a transfer needs at least 2 KiB of contiguous data per partition to approach peak bandwidth, and one large DMA beats many small ones. On top of that, you reason about SBUF partition layout and which operand stays stationary in the systolic array.
+<b>From GPU to Trainium, the execution model changes:</b> Trainium replaces warps and the hardware warp scheduler with compiled instruction streams: each engine runs its own stream asynchronously, and the compiler inserts semaphore synchronization between them. Occupancy gives way to overlap: the instruction streams must keep DMA transfers and the Tensor, Vector, Scalar, and GpSimd engines busy at the same time. Coalescing survives as DMA efficiency: a transfer needs at least 2 KiB of contiguous data per partition to approach peak bandwidth, and one large DMA beats many small ones. On top of that, you reason about SBUF partition layout and which operand stays stationary in the systolic array.
 
 <b>Custom kernels exist on both sides.</b> On Trainium they are written in NKI (Neuron Kernel Interface), a bare-metal kernel language, written in Python, that exposes the NeuronCore ISA directly through <code>nki.isa</code>. AWS publishes the NKI Library, an open-source set of pre-built kernels optimized for Neuron devices, and NKI kernels drop into PyTorch and JAX models as custom operators. The difference from CUDA is what you control: no warps to schedule, but explicit tiles, SRAM placement, and DMA transfers.
 
@@ -551,7 +551,7 @@ Decode is memory-bound (Sections 3 and 4), so to first order <b>decode throughpu
 decode cost per token  ∝  system cost (or power) ÷ delivered HBM bandwidth
 ```
 
-For a Trn3 Gen2 UltraServer the denominator is 705.6 TB/s per system. In production, measured decode throughput replaces peak bandwidth, since kernels, MoE routing, and software shift it (Section 13).
+For a Trn3 Gen2 UltraServer the denominator is 705.6 TB/s per system. In production, measured decode throughput replaces peak bandwidth, since kernels, MoE routing, and software shift it.
 
 <b>Sizing the decode pool.</b> In the 1K in / 8K out shape, decode tokens outnumber prefill tokens 8 to 1, so the decode pool is most of the fleet. Three numbers size it:
 
@@ -581,7 +581,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
 
-<b>Takeaway:</b> cost per token is driven by software (speculative decoding, PD disaggregation, kernel quality), $/chip-hr, HBM bandwidth, the scale-up domain (MoE), FP4 throughput (prefill), and FP8 peak. The relative importance of these factors depends on the workload and its bottleneck, and peak FLOPS is rarely the binding one. Count only tokens served within your TTFT and TPOT targets (goodput): a system that makes more tokens but misses the SLO costs more per useful token.
+<b>Takeaway:</b> cost per token is driven by software (speculative decoding, PD disaggregation, kernel quality), $/chip-hr, HBM bandwidth, the scale-up domain (MoE), low-precision dense throughput (prefill), and peak FLOPS. The relative importance of these factors depends on the workload and its bottleneck, and peak FLOPS is rarely the binding one. Count only tokens served within your TTFT and TPOT targets (goodput): a system that makes more tokens but misses the SLO costs more per useful token.
 
 </div>
 
