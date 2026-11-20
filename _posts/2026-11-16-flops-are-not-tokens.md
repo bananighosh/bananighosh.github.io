@@ -383,7 +383,7 @@ Interconnect bandwidth can matter more than another few hundred TFLOPS.
 
 ## 8. Software: the part that often decides real performance
 
-A chip is only as fast as the code that runs on it. An excellent chip with a weak compiler can lose to weaker hardware with a mature stack.
+A chip is only as fast as the code that runs on it, which is why the compiler and kernel stack matter as much as the silicon.
 
 <figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v3.svg" alt="software stacks v3" loading="lazy"></figure>
 
