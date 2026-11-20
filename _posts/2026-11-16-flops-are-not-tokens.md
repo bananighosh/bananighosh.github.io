@@ -638,12 +638,10 @@ Web pages accessed November 2026.
 8. Open Compute Project. [OCP Microscaling Formats (MX) Specification v1.0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf). 2023.
 9. Meta. [Llama 3.3 70B Instruct model configuration](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/blob/main/config.json).
 10. SemiAnalysis. [InferenceX: supported accelerators](https://inferencex.semianalysis.com/about).
-11. SemiAnalysis. [OpenAI Jalapeño: Better Than Nvidia Blackwell](https://inferencex.semianalysis.com/blog/openai-jalapeno-better-than-nvidia). 2026.
 12. SemiAnalysis. [AWS Trainium3 Deep Dive](https://newsletter.semianalysis.com/p/aws-trainium3-deep-dive-a-potential). 2025.
 13. NVIDIA. [CUDA C++ Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/).
 14. NVIDIA. [Hopper Tuning Guide](https://docs.nvidia.com/cuda/hopper-tuning-guide/index.html).
 15. NVIDIA. [Matrix Multiplication Background User's Guide](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html).
-16. NVIDIA. [CUTLASS: Blackwell architecture](https://www.mintlify.com/NVIDIA/cutlass/architectures/blackwell).
 17. PyTorch. [torch.compile](https://docs.pytorch.org/docs/stable/torch.compiler.html).
 18. AMD. [ROCm: MI350 Series microarchitecture](https://rocm.docs.amd.com/en/latest/reference/gpu-arch/mi350.html).
 19. AWS. [Amazon EC2 Trn3 instances](https://aws.amazon.com/ec2/instance-types/trn3/).
@@ -666,9 +664,4 @@ Web pages accessed November 2026.
 36. OpenAI. [gpt-oss-120b and gpt-oss-20b Model Card](https://cdn.openai.com/pdf/419b6906-9da6-406c-a19d-1bb078ac7637/oai_gpt-oss_model_card.pdf). 2025.
 37. LMSYS. [SGLang-Neuron v0.1.0: SGLang's Serving Stack on AWS Trainium](https://www.lmsys.org/blog/2026-11-12-sglang-neuron-v0.1.0). 2026.
 38. OpenAI. [OpenAI and Broadcom: Jalapeño](https://openai.com/index/openai-broadcom-jalapeno-inference-chip/). 2026.
-39. OpenAI. [Jalapeño first results](https://openai.com/index/jalapeno-first-results/). 2026.
-40. ServeTheHome. [OpenAI Jalapeño at Hot Chips 2026](https://www.servethehome.com/openai-jalapeno-asic-at-hot-chips-2026/). 2026.
-41. Tom's Hardware. [Hot Chips 2026: OpenAI's Jalapeño unpacked](https://www.tomshardware.com/tech-industry/artificial-intelligence/hot-chips-2026-openais-jalapeno-ai-asic-unpacked-accelerator-developed-using-ai-achieves-efficiency-and-throughput-gains-against-power-hungry-blackwell). 2026.
 42. Tom's Hardware. [Jalapeño is for OpenAI's internal use](https://www.tomshardware.com/tech-industry/artificial-intelligence/openais-custom-jalapeno-ai-inference-asic-is-for-openais-internal-use-but-company-leaves-the-door-open-to-broader-rollout-firm-says-it-will-have-its-hands-full-with-jalapeno-for-a-good-long-time). 2026.
-43. HotHardware. [OpenAI and Broadcom reveal Jalapeño](https://hothardware.com/news/openai-broadcom-reveal-jalapeno-ai-chip). 2026.
-44. Tom's Hardware. [Amazon launches Trainium3](https://www.tomshardware.com/tech-industry/artificial-intelligence/amazon-launches-trainium3-ai-accelerator-competing-directly-against-blackwell-ultra-in-fp8-performance-new-trn3-gen2-ultraserver-takes-vertical-scaling-notes-from-nvidias-playbook). 2025.
