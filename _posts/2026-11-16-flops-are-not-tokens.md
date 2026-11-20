@@ -113,7 +113,7 @@ A large model runs across many chips, so the unit to reason about is the system 
 
 Trainium3 runs FP8, MXFP8, and MXFP4 at 2.517 PF, and FP4 pays off where decode is limited: bytes. MXFP4 stores 4.25 bits per weight, one shared 8-bit scale per 32 values included, so Llama 3.3 70B's weights (the running example, Section 3) shrink from 70.55 GB to 37.48 GB. Every decode step reads 53.125% of the weight bytes, and the freed HBM holds more KV cache, which means more conversations per chip.
 
-<b>Efficiency, same kernel workflow.</b> A new operator becomes a Triton or CUDA kernel on GPUs and an NKI kernel on Trainium, often starting from the open-source NKI Library. Anthropic's Project Rainier runs on nearly 500,000 Trainium2 chips.
+<b>Kernel workflow.</b> A new operator becomes a Triton or CUDA kernel on GPUs and an NKI kernel on Trainium, often starting from the open-source NKI Library.
 
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
@@ -572,9 +572,9 @@ For a Trn3 Gen2 UltraServer the denominator is 705.6 TB/s per system. In product
 
 In decode-heavy serving, most of the cost is decode, which is bound by HBM bandwidth, the scale-up fabric, and software, so <b>$/hour ÷ delivered tokens</b> decides fleet economics.
 
-### ASICs: the principles hold in production
+### ASICs in production
 
-<b>AWS Trainium3 optimizes dollars.</b> Decode cost tracks the price of HBM bandwidth (Section 12), and the Trn3 Gen2 UltraServer delivers 705.6 TB/s of HBM bandwidth per system. Anthropic, Karakuri, Metagenomi, NetoAI, Ricoh, and Splash Music report up to 50% lower training and inference costs on Trainium, and on Amazon Bedrock, Trainium3 delivers up to 3x faster performance than Trainium2.
+<b>AWS Trainium3: cost per token.</b> Decode cost tracks the price of HBM bandwidth (Section 12), and the Trn3 Gen2 UltraServer delivers 705.6 TB/s of HBM bandwidth per system. Anthropic, Karakuri, Metagenomi, NetoAI, Ricoh, and Splash Music report up to 50% lower training and inference costs on Trainium, and on Amazon Bedrock, Trainium3 delivers up to 3x faster performance than Trainium2. At scale, Anthropic's Project Rainier runs on nearly 500,000 Trainium2 chips.
 
 <b>What favors ASICs.</b> In a MoE model, expert parallelism runs an all-to-all every layer, so the scale-up domain shapes cost per token (Section 7). ASIC systems build that domain large: 144 chips on one NeuronLink-v4 domain in the Trn3 Gen2 UltraServer.
 
