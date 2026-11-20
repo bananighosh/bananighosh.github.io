@@ -625,6 +625,10 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 
 ---
 
+<i>Opinions are my own and do not represent my employer. All figures come from the public sources cited below.</i>
+
+---
+
 ## References
 
 Web pages accessed November 2026.
