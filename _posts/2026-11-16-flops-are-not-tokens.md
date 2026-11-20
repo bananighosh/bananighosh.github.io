@@ -106,19 +106,19 @@ A large model runs across many chips, so the unit to reason about is the system 
 |  | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
 | Chips | 144 Trainium3 (36 servers × 4) |
-| Dense FP8, MXFP8, or MXFP4 | 362.448 PF |
+| Peak low-precision compute (MXFP8/MXFP4) | 362.448 PF |
 | HBM capacity (nominal) | 20.7 TB |
 | HBM bandwidth | 705.6 TB/s |
 | Scale-up | NeuronLink-v4, 2,560 GB/s per chip (both directions) |
 
-Trainium3 runs FP8, MXFP8, and MXFP4 at 2.517 PF, and FP4 pays off where decode is limited: bytes. MXFP4 stores 4.25 bits per weight, one shared 8-bit scale per 32 values included, so Llama 3.3 70B's weights (the running example, Section 3) shrink from 70.55 GB to 37.48 GB. Every decode step reads 53.125% of the weight bytes, and the freed HBM holds more KV cache, which means more conversations per chip.
+Trainium3 supports FP8, MXFP8, and MXFP4, with peak low-precision compute (MXFP8/MXFP4) of 2.517 PF per chip, and FP4 pays off where decode is limited: bytes. MXFP4 stores 4.25 bits per weight, one shared 8-bit scale per 32 values included, so Llama 3.3 70B's weights (the running example, Section 3) shrink from 70.55 GB to 37.48 GB. Every decode step reads 53.125% of the weight bytes, and the freed HBM holds more KV cache, which means more conversations per chip.
 
 <b>Kernel workflow.</b> A new operator becomes a Triton or CUDA kernel on GPUs and an NKI kernel on Trainium, often starting from the open-source NKI Library.
 
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
 
-<b>Interview Lens:</b> <i>How do you compare accelerators built from chips of different sizes?</i> Normalize to the system that serves the model: compute, HBM capacity, and HBM bandwidth, then divide by dollars or watts. Chip count is a packaging choice: 144 Trainium3 chips add up to 362.448 PF of FP8, 20.7 TB of HBM, and 705.6 TB/s in one Trn3 Gen2 UltraServer.
+<b>Interview Lens:</b> <i>How do you compare accelerators built from chips of different sizes?</i> Normalize to the system that serves the model: compute, HBM capacity, and HBM bandwidth, then divide by dollars or watts. Chip count is a packaging choice: 144 Trainium3 chips add up to 362.448 PF of MXFP8/MXFP4 compute, 20.7 TB of HBM, and 705.6 TB/s in one Trn3 Gen2 UltraServer.
 
 </div>
 
@@ -149,7 +149,7 @@ For FP8 decode, the weight reads alone give an arithmetic intensity of <b>2 × b
 
 <figure><img src="/assets/img/flops-are-not-tokens/roofline-trainium-gens.svg" alt="Roofline per system for the Trn2, Trn3 Gen1, and Trn3 Gen2 UltraServers, from published peak specifications." loading="lazy"><figcaption>Roofline per system for the Trn2, Trn3 Gen1, and Trn3 Gen2 UltraServers, from published peak specifications.</figcaption></figure>
 
-<b>How the roofline moves from Trainium2 to Trainium3.</b> The Trn2 and Trn3 Gen1 UltraServers both hold 64 chips, so comparing them separates the chip generation from the system size. Dense 8-bit compute grows 1.936x and HBM bandwidth 1.690x, so the ridge point moves from 448.28 to 513.67 FLOP/B, and decode becomes compute-bound at batch 257 instead of 225 (weights only). Scaling Trn3 from 64 to 144 chips raises both ceilings by the same factor and leaves the ridge point at 513.67 FLOP/B. Every long-context decode marker sits left of all three ridge points, so for long-context decode the bandwidth increase is what raises the ceiling. More compute raises the flat roof; more bandwidth raises the slanted one.
+<b>How the roofline moves from Trainium2 to Trainium3.</b> The Trn2 and Trn3 Gen1 UltraServers both hold 64 chips, so comparing them separates the chip generation from the system size. Dense 8-bit compute grows 1.936x and HBM bandwidth 1.690x, so the ridge point moves from 448.28 to 513.67 FLOP/B, and the weight-only ridge-point batch moves from 225 to 257. Counting KV cache traffic as well, long-context decode stays below the ridge on all three systems (Section 4). Scaling Trn3 from 64 to 144 chips raises both ceilings by the same factor and leaves the ridge point at 513.67 FLOP/B. Every long-context decode marker sits left of all three ridge points, so for long-context decode the bandwidth increase is what raises the ceiling. More compute raises the flat roof; more bandwidth raises the slanted one.
 
 <figure><img src="/assets/img/flops-are-not-tokens/trainium-gens-scaling.svg" alt="Peak compute, HBM bandwidth, and HBM capacity of each UltraServer relative to Trn2, from published specifications." loading="lazy"><figcaption>Peak compute, HBM bandwidth, and HBM capacity of each UltraServer relative to Trn2, from published specifications.</figcaption></figure>
 
@@ -316,12 +316,12 @@ Large models span many chips, and chips must talk every layer. The <b>α–β mo
 Message time = α (startup latency) + size ÷ β (bandwidth)
 
 Tensor-parallel decode, running example on 8 chips, 32 sequences, BF16 activations:
-  one all-reduce = 32 × 8,192 × 2 bytes = 524,288 bytes   → time dominated by α
+  one all-reduce = 32 × 8,192 × 2 bytes = 524,288 bytes   → small message, latency-sensitive
   2 all-reduces per layer × 80 layers = 160 per decode step
-  → every generated token pays the fabric's startup latency 160 times
+  → every generated token pays the fabric's startup latency 160 times, on top of transfer time
 ```
 
-More link bandwidth barely helps here; lower latency does. That is why serving stacks ship one-shot all-reduce kernels for small messages, and why vendors push reductions into the fabric.
+For messages this small, startup latency can matter as much as link bandwidth. That is why serving stacks ship one-shot all-reduce kernels for small messages, and why vendors push reductions into the fabric.
 
 Each kind of parallelism puts a different load on the fabric:
 
@@ -468,7 +468,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 | Scenario | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
-| A. Prefill | 362.448 PF of dense FP8, MXFP8, or MXFP4 |
+| A. Prefill | 362.448 PF of peak low-precision compute (MXFP8/MXFP4) |
 | B. Low-latency decode | 3.60 ms minimum per token (Section 3) |
 | C. Long context | 20.7 TB of HBM; 3,384 conversations at 32K |
 | D. MoE | One 144-chip NeuronLink-v4 domain; collectives on dedicated CC-Cores |
@@ -588,7 +588,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
 
-<b>Interview Lens:</b> <i>Two systems deliver the same FP8 PFLOPS. Which costs less per token?</i> For decode-heavy serving, the one with more HBM bandwidth per dollar, because decode is memory-bound. For MoE, also the one that keeps all-to-all inside its scale-up domain. Software then decides how much of that bandwidth becomes tokens, through kernel quality and speculative decoding.
+<b>Interview Lens:</b> <i>Two systems deliver the same peak PFLOPS. Which costs less per token?</i> For decode-heavy serving, the one with more HBM bandwidth per dollar, because decode is memory-bound. For MoE, also the one that keeps all-to-all inside its scale-up domain. Software then decides how much of that bandwidth becomes tokens, through kernel quality and speculative decoding.
 
 </div>
 
