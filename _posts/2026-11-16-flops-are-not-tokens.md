@@ -94,7 +94,7 @@ Think of a kitchen equipped for any cuisine against one built only for ramen. Th
 
 What this buys, beyond cost:
 
-- <b>Communication that does not steal compute.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. DeepSeek-V3 gave 20 of 132 H800 SMs (15.2%) to all-to-all, and asked hardware vendors to offload communication from the SMs. Trainium3 ships dedicated collective cores (CC-Cores) on every chip.
+- <b>Communication that does not steal compute.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. DeepSeek-V3 dedicated part of its GPUs' SMs to all-to-all, and asked hardware vendors to offload communication from the SMs. Trainium3 ships dedicated collective cores (CC-Cores) on every chip.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
 - <b>Larger scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1.
 - <b>More tokens per watt.</b> The Trn3 UltraServer delivers 4x the energy efficiency of the Trn2 UltraServer.
@@ -294,8 +294,8 @@ Prefill fills tiles easily (batch × prompt rows). Decode at small batch wastes 
 
 |  | NVIDIA | AMD | AWS Trainium | OpenAI Jalapeño |
 | --- | --- | --- | --- | --- |
-| Matrix unit | Tensor Core MMA with M of 64 or 128 per thread block, 256 per CTA pair (Blackwell) | MFMA on 16- or 32-row blocks per wavefront | 128×128 systolic array per NeuronCore | Not disclosed |
-| Small-batch handling | Many small tiles run concurrently across SMs; split-K and stream-K | 16-row MFMA tiles; split-K and stream-K in hipBLASLt | Stationary operand loaded into the array, moving operand streamed; dynamic-shape ISA support can reduce padded shape buckets | Not disclosed |
+| Matrix unit | Tensor Core MMA on fixed-size tiles per thread block | MFMA on fixed-size blocks per wavefront | 128×128 systolic array per NeuronCore | Not disclosed |
+| Small-batch handling | Many small tiles run concurrently across SMs; split-K and stream-K | Small MFMA tiles; split-K and stream-K in hipBLASLt | Stationary operand loaded into the array, moving operand streamed; dynamic-shape ISA support can reduce padded shape buckets | Not disclosed |
 
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
@@ -404,7 +404,7 @@ Between NVIDIA and AMD the names differ but the concepts map closely; porting us
 | Concept | NVIDIA | AMD | AWS Trainium | OpenAI Jalapeño |
 | --- | --- | --- | --- | --- |
 | Write a fused kernel in | CUDA, Triton, CUTLASS/CuTe | HIP, Triton, Composable Kernel | NKI (Python, direct ISA access) or the open-source NKI Library; Neuron compiler for the rest of the graph | Internal only |
-| Execution unit | SM, warp of 32 threads | CU, wavefront of 64 | NeuronCore-v4: Tensor, Vector, Scalar, GpSimd engines. No warps | Not disclosed |
+| Execution unit | SM, warps of threads | CU, wavefronts of threads | NeuronCore-v4: Tensor, Vector, Scalar, GpSimd engines. No warps | Not disclosed |
 | Programmer SRAM | Shared memory | LDS | SBUF: 32 MiB per core, 128 partitions | Not disclosed |
 | Accumulators | Registers; Tensor Memory on Blackwell | VGPRs / AGPRs | PSUM: 2 MiB per core | Not disclosed |
 | HBM to SRAM movement | TMA, async copies | Global / buffer loads | 128 DMA engines per chip, explicit in NKI, scheduled by the compiler | Not disclosed |
@@ -574,9 +574,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 
 ### ASICs: the principles hold in production
 
-<b>AWS Trainium3 optimizes dollars.</b> Decode cost tracks the price of HBM bandwidth (Section 12), and the Trn3 Gen2 UltraServer delivers 705.6 TB/s of HBM bandwidth per system. Anthropic, Karakuri, Metagenomi, NetoAI, Ricoh, and Splash Music report up to 50% lower training and inference costs on Trainium, Decart reports 4x faster real-time video inference at half the cost of GPUs, and on Amazon Bedrock, Trainium3 delivers up to 3x faster performance than Trainium2.
-
-<b>OpenAI Jalapeño optimizes watts.</b> At 22.0 GB/s of HBM bandwidth per watt (Section 5), first principles predict high throughput per watt. OpenAI reports 1.5x to 1.9x higher throughput per watt than its tested GPU baselines on selected inference workloads. Watts matter most when data center power, rather than budget, is the limit.
+<b>AWS Trainium3 optimizes dollars.</b> Decode cost tracks the price of HBM bandwidth (Section 12), and the Trn3 Gen2 UltraServer delivers 705.6 TB/s of HBM bandwidth per system. Anthropic, Karakuri, Metagenomi, NetoAI, Ricoh, and Splash Music report up to 50% lower training and inference costs on Trainium, and on Amazon Bedrock, Trainium3 delivers up to 3x faster performance than Trainium2.
 
 <b>What favors ASICs.</b> In a MoE model, expert parallelism runs an all-to-all every layer, so the scale-up domain shapes cost per token (Section 7). ASIC systems build that domain large: 144 chips on one NeuronLink-v4 domain in the Trn3 Gen2 UltraServer.
 
