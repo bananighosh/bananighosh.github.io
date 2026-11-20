@@ -316,7 +316,8 @@ Large models span many chips, and chips must talk every layer. The <b>α–β mo
 Message time = α (startup latency) + size ÷ β (bandwidth)
 
 Tensor-parallel decode, running example on 8 chips, 32 sequences, BF16 activations:
-  one all-reduce = 32 × 8,192 × 2 bytes = 524,288 bytes   → small message, latency-sensitive
+  one all-reduce = 32 × 8,192 × 2 bytes = 524,288 bytes   → small message, latency-sensitive:
+                                                            dominated by α whenever α exceeds 524,288 bytes ÷ β
   2 all-reduces per layer × 80 layers = 160 per decode step
   → every generated token pays the fabric's startup latency 160 times, on top of transfer time
 ```
