@@ -625,7 +625,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 
 ---
 
-<i>Opinions are my own and do not represent my employer. All figures come from the public sources cited below.</i>
+<i>Views are my own. This post explains ASIC design from first principles, and every figure in it comes from the public sources cited below.</i>
 
 ---
 
