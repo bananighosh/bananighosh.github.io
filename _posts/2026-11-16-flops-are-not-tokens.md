@@ -90,14 +90,14 @@ Trainium3 replaces the hardware cache with explicit DMA: every byte moves on a s
 
 Every accelerator has the same three fixed budgets: <b>die area, power, and the HBM interface</b>. A GPU spreads its budget across thousands of thread contexts, register files, hardware schedulers, caches, and many number formats. An ASIC spends it on what limits LLM inference: bytes moved, on-chip reuse, and chip-to-chip traffic.
 
-Think of a kitchen equipped for any cuisine against one built only for ramen. The ramen kitchen does not have a better chef. It has no idle equipment, and every square meter goes to the steps that slow ramen down.
+Think of a kitchen equipped for any cuisine against one built only for ramen. The ramen kitchen does not have a better chef. Every square meter goes to the steps that slow ramen down.
 
 What this buys, beyond cost:
 
-- <b>Collectives on dedicated cores.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. DeepSeek-V3 dedicated part of its GPUs' SMs to all-to-all, and asked hardware vendors to offload communication from the SMs. Trainium3 ships dedicated collective cores (CC-Cores) on every chip.
+- <b>Collectives on dedicated cores.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. Trainium3 ships dedicated collective cores (CC-Cores) on every chip.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
-- <b>Larger scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1.
-- <b>More tokens per watt.</b> The Trn3 UltraServer delivers 4x better performance per watt than the Trn2 UltraServer.
+- <b>Large scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1.
+- <b>Tokens per watt across generations.</b> The Trn3 UltraServer delivers 4x better performance per watt than the Trn2 UltraServer.
 
 ### The system is the building block
 
@@ -364,7 +364,7 @@ GPT-OSS 120B is a MoE model with 36 layers, 128 experts per layer, and 4 experts
 
 <b>Prefill: small replicas.</b> Each prefill replica is its own TP4 server with EP2, because expert parallelism cannot share data-parallel ranks on the prefill graph.
 
-<b>Scaling out: whole instances.</b> More traffic adds instances, not wider expert groups. For production, the tutorial recommends six prefill replicas for each decode instance and 16 replicas on each prefill instance. Three prefill instances and eight decode instances then use every NeuronCore: 48 prefill replicas and 8 decode servers on 11 instances.
+<b>Scaling out: whole instances.</b> More traffic adds instances, not wider expert groups. For production, vLLM Neuron's tutorial recommends six prefill replicas for each decode instance and 16 replicas on each prefill instance. Three prefill instances and eight decode instances then use every NeuronCore: 48 prefill replicas and 8 decode servers on 11 instances.
 
 <b>Placement on Trainium.</b> A Trn3 UltraServer gives expert placement locality to use: experts that exchange the most traffic can share a server's 1,024 GB/s switch tier, and the CC-Cores run the all-to-all while the NeuronCores compute.
 
