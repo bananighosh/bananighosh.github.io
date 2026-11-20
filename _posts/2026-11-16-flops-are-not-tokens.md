@@ -164,8 +164,8 @@ Minimum time per decode step on one Trn3 server = 70.55 GB of weights ÷ 19.6 TB
 |  | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
 | One copy of the weights | One Trn3 server: 4 chips, 576 GB of HBM, 19.6 TB/s |
-| Minimum time per decode step | 3.5997 ms |
-| Max tokens/s for one user (one token per step) | 277.80 |
+| Minimum time per token | 3.60 ms |
+| Max tokens/s for one user | 277.8 |
 | Ridge point | 513.67 FLOP/B |
 | Weight-only ridge-point batch | 257 |
 | Copies of the weights per UltraServer | 36 |
@@ -364,14 +364,14 @@ GPT-OSS 120B is a MoE model with 36 layers, 128 experts per layer, and 4 experts
 
 <b>Prefill: small replicas.</b> Each prefill replica is its own TP4 server with EP2, because expert parallelism cannot share data-parallel ranks on the prefill graph.
 
-<b>Scaling out: whole instances.</b> More traffic adds instances, not wider expert groups. For production, the tutorial recommends six prefill replicas for each decode instance and 16 replicas on each prefill instance. Three prefill instances and eight decode instances then use every NeuronCore: 48 prefill replicas and 8 decode replicas on 11 instances.
+<b>Scaling out: whole instances.</b> More traffic adds instances, not wider expert groups. For production, the tutorial recommends six prefill replicas for each decode instance and 16 replicas on each prefill instance. Three prefill instances and eight decode instances then use every NeuronCore: 48 prefill replicas and 8 decode servers on 11 instances.
 
 <b>What the GPU design does differently.</b> A GPU rack-scale NVLink domain is one flat tier: every GPU reaches every other through the switches at the same bandwidth, so expert placement inside it needs no tiering, and the all-to-all runs by default on the same SMs as the math (Section 2). On a Trn3 UltraServer the tiers make placement a design decision, and the CC-Cores run the all-to-all while the NeuronCores compute.
 
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
 
-<b>Interview Lens:</b> <i>Why does the GPT-OSS 120B decode replica run exactly 128 ranks?</i> The model has 128 experts per layer. At EP128 each NeuronCore holds one expert of every layer, so expert weights split evenly and the all-to-all stays inside one instance. Throughput then scales by adding instances, not by widening the expert group.
+<b>Interview Lens:</b> <i>Why does the GPT-OSS 120B decode server run exactly 128 ranks?</i> The model has 128 experts per layer. At EP128 each NeuronCore holds one expert of every layer, so expert weights split evenly and the all-to-all stays inside one instance. Throughput then scales by adding instances, not by widening the expert group.
 
 </div>
 
@@ -458,7 +458,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 <b>C. Long context.</b> KV capacity and KV bandwidth decide (Section 4).
 
-<b>D. Mixture of Experts.</b> Each layer adds two all-to-alls, and the busiest device sets the pace. A large scale-up domain keeps that traffic off the scale-out network: the GPT-OSS 120B deployment in Section 7 keeps it inside one Trn3 instance, and Jalapeño offers a 128-chip local domain.
+<b>D. Mixture of Experts.</b> Each layer adds two all-to-alls, and the busiest device sets the pace. A large scale-up domain keeps that traffic off the scale-out network: the GPT-OSS 120B deployment in Section 7 keeps it inside one Trn3 instance.
 
 <figure><img src="/assets/img/flops-are-not-tokens/moe-layer-v2.svg" alt="moe layer v2" loading="lazy"></figure>
 
@@ -469,7 +469,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 | Scenario | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
 | A. Prefill | 362.448 PF of dense FP8, MXFP8, or MXFP4 |
-| B. Low-latency decode | 3.5997 ms minimum per decode step (Section 3) |
+| B. Low-latency decode | 3.60 ms minimum per token (Section 3) |
 | C. Long context | 20.7 TB of HBM; 3,384 conversations at 32K |
 | D. MoE | One 144-chip NeuronLink-v4 domain; collectives on dedicated CC-Cores |
 | E. Speculative decoding | EAGLE3 in vLLM Neuron |
