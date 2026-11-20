@@ -633,35 +633,34 @@ Web pages accessed November 2026.
 3. M. Horowitz. Computing's Energy Problem (and What We Can Do About It). ISSCC, 2014.
 4. J. Little. A Proof for the Queuing Formula L = λW. Operations Research, 1961.
 5. Y. Leviathan, M. Kalman, Y. Matias. [Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/abs/2211.17192). ICML, 2023.
-6. DeepSeek-AI. [DeepSeek-V3 Technical Report](https://arxiv.org/abs/2412.19437). 2024.
-7. L. Zheng et al. [LMSYS-Chat-1M: A Large-Scale Real-World LLM Conversation Dataset](https://arxiv.org/abs/2309.11998). ICLR, 2024.
-8. Open Compute Project. [OCP Microscaling Formats (MX) Specification v1.0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf). 2023.
-9. Meta. [Llama 3.3 70B Instruct model configuration](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/blob/main/config.json).
-10. SemiAnalysis. [InferenceX: supported accelerators](https://inferencex.semianalysis.com/about).
-11. SemiAnalysis. [AWS Trainium3 Deep Dive](https://newsletter.semianalysis.com/p/aws-trainium3-deep-dive-a-potential). 2025.
-12. NVIDIA. [CUDA C++ Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/).
-13. NVIDIA. [Hopper Tuning Guide](https://docs.nvidia.com/cuda/hopper-tuning-guide/index.html).
-14. NVIDIA. [Matrix Multiplication Background User's Guide](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html).
-15. PyTorch. [torch.compile](https://docs.pytorch.org/docs/stable/torch.compiler.html).
-16. AMD. [ROCm: MI350 Series microarchitecture](https://rocm.docs.amd.com/en/latest/reference/gpu-arch/mi350.html).
-17. AWS. [Amazon EC2 Trn3 instances](https://aws.amazon.com/ec2/instance-types/trn3/).
-18. Amazon. [Trainium3 UltraServers now available](https://press.aboutamazon.com/2025/12/trainium3-ultraservers-now-available-enabling-customers-to-train-and-deploy-ai-models-faster-at-lower-cost). 2025.
-19. Amazon. [Project Rainier](https://aboutamazon.com/news/aws/aws-project-rainier-ai-trainium-chips-compute-cluster/). 2025.
-20. AWS Neuron. [Trainium3](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/about-neuron/arch/neuron-hardware/trainium3.html).
-21. AWS Neuron. [Trn3 architecture](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/about-neuron/arch/neuron-hardware/trn3-arch.html).
-22. AWS Neuron. [Trainium3 architecture guide for NKI](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/nki/guides/architecture/trainium3_arch.html).
-23. AWS Neuron. [Trainium architecture guide for NKI](https://awsdocs-neuron.readthedocs-hosted.com/en/v2.32.0/_sources/nki/guides/architecture/trainium_inferentia2_arch.rst).
-24. AWS Neuron. [NKI DMA bandwidth guide](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/nki/deep-dives/nki-dma-bandwidth-guide.html).
-25. AWS Neuron. [Neuron Kernel Interface (NKI)](https://awsdocs-neuron.readthedocs-hosted.com/en/v2.31.0/_sources/nki/index.rst).
-26. AWS Neuron. [Collective communication](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/general/arch/neuron-features/collective-communication.html).
-27. AWS Neuron. [Developer tools](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/tools/index.rst).
-28. AWS Neuron. [Speculative decoding in vLLM Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/vllm-neuron/docs/design/speculation/speculative_decoding_design.md).
-29. AWS Neuron. [Disaggregated inference in vLLM Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/vllm-neuron/docs/design/vllm/disaggregated-inference.md).
-30. AWS. [NKI Library](https://github.com/aws-neuron/nki-library). GitHub.
-31. AWS. [TorchNeuron](https://github.com/aws-neuron/torch-neuronx). GitHub.
-32. vLLM Project. [vLLM Neuron](https://github.com/vllm-project/vllm-neuron). GitHub.
-33. vLLM Project. [GPT-OSS 120B 8K/1K disaggregated serving on Trn3](https://github.com/vllm-project/vllm-neuron/blob/main/docs/tutorials/tutorial-gpt-oss-120b-8k1k-trn3.md). GitHub.
-34. OpenAI. [gpt-oss-120b and gpt-oss-20b Model Card](https://cdn.openai.com/pdf/419b6906-9da6-406c-a19d-1bb078ac7637/oai_gpt-oss_model_card.pdf). 2025.
-35. LMSYS. [SGLang-Neuron v0.1.0: SGLang's Serving Stack on AWS Trainium](https://www.lmsys.org/blog/2026-11-12-sglang-neuron-v0.1.0). 2026.
-36. OpenAI. [OpenAI and Broadcom: Jalapeño](https://openai.com/index/openai-broadcom-jalapeno-inference-chip/). 2026.
-37. Tom's Hardware. [Jalapeño is for OpenAI's internal use](https://www.tomshardware.com/tech-industry/artificial-intelligence/openais-custom-jalapeno-ai-inference-asic-is-for-openais-internal-use-but-company-leaves-the-door-open-to-broader-rollout-firm-says-it-will-have-its-hands-full-with-jalapeno-for-a-good-long-time). 2026.
+6. L. Zheng et al. [LMSYS-Chat-1M: A Large-Scale Real-World LLM Conversation Dataset](https://arxiv.org/abs/2309.11998). ICLR, 2024.
+7. Open Compute Project. [OCP Microscaling Formats (MX) Specification v1.0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf). 2023.
+8. Meta. [Llama 3.3 70B Instruct model configuration](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/blob/main/config.json).
+9. SemiAnalysis. [InferenceX: supported accelerators](https://inferencex.semianalysis.com/about).
+10. SemiAnalysis. [AWS Trainium3 Deep Dive](https://newsletter.semianalysis.com/p/aws-trainium3-deep-dive-a-potential). 2025.
+11. NVIDIA. [CUDA C++ Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/).
+12. NVIDIA. [Hopper Tuning Guide](https://docs.nvidia.com/cuda/hopper-tuning-guide/index.html).
+13. NVIDIA. [Matrix Multiplication Background User's Guide](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html).
+14. PyTorch. [torch.compile](https://docs.pytorch.org/docs/stable/torch.compiler.html).
+15. AMD. [ROCm: MI350 Series microarchitecture](https://rocm.docs.amd.com/en/latest/reference/gpu-arch/mi350.html).
+16. AWS. [Amazon EC2 Trn3 instances](https://aws.amazon.com/ec2/instance-types/trn3/).
+17. Amazon. [Trainium3 UltraServers now available](https://press.aboutamazon.com/2025/12/trainium3-ultraservers-now-available-enabling-customers-to-train-and-deploy-ai-models-faster-at-lower-cost). 2025.
+18. Amazon. [Project Rainier](https://aboutamazon.com/news/aws/aws-project-rainier-ai-trainium-chips-compute-cluster/). 2025.
+19. AWS Neuron. [Trainium3](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/about-neuron/arch/neuron-hardware/trainium3.html).
+20. AWS Neuron. [Trn3 architecture](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/about-neuron/arch/neuron-hardware/trn3-arch.html).
+21. AWS Neuron. [Trainium3 architecture guide for NKI](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/nki/guides/architecture/trainium3_arch.html).
+22. AWS Neuron. [Trainium architecture guide for NKI](https://awsdocs-neuron.readthedocs-hosted.com/en/v2.32.0/_sources/nki/guides/architecture/trainium_inferentia2_arch.rst).
+23. AWS Neuron. [NKI DMA bandwidth guide](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/nki/deep-dives/nki-dma-bandwidth-guide.html).
+24. AWS Neuron. [Neuron Kernel Interface (NKI)](https://awsdocs-neuron.readthedocs-hosted.com/en/v2.31.0/_sources/nki/index.rst).
+25. AWS Neuron. [Collective communication](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/general/arch/neuron-features/collective-communication.html).
+26. AWS Neuron. [Developer tools](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/tools/index.rst).
+27. AWS Neuron. [Speculative decoding in vLLM Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/vllm-neuron/docs/design/speculation/speculative_decoding_design.md).
+28. AWS Neuron. [Disaggregated inference in vLLM Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/_sources/vllm-neuron/docs/design/vllm/disaggregated-inference.md).
+29. AWS. [NKI Library](https://github.com/aws-neuron/nki-library). GitHub.
+30. AWS. [TorchNeuron](https://github.com/aws-neuron/torch-neuronx). GitHub.
+31. vLLM Project. [vLLM Neuron](https://github.com/vllm-project/vllm-neuron). GitHub.
+32. vLLM Project. [GPT-OSS 120B 8K/1K disaggregated serving on Trn3](https://github.com/vllm-project/vllm-neuron/blob/main/docs/tutorials/tutorial-gpt-oss-120b-8k1k-trn3.md). GitHub.
+33. OpenAI. [gpt-oss-120b and gpt-oss-20b Model Card](https://cdn.openai.com/pdf/419b6906-9da6-406c-a19d-1bb078ac7637/oai_gpt-oss_model_card.pdf). 2025.
+34. LMSYS. [SGLang-Neuron v0.1.0: SGLang's Serving Stack on AWS Trainium](https://www.lmsys.org/blog/2026-11-12-sglang-neuron-v0.1.0). 2026.
+35. OpenAI. [OpenAI and Broadcom: Jalapeño](https://openai.com/index/openai-broadcom-jalapeno-inference-chip/). 2026.
+36. Tom's Hardware. [Jalapeño is for OpenAI's internal use](https://www.tomshardware.com/tech-industry/artificial-intelligence/openais-custom-jalapeno-ai-inference-asic-is-for-openais-internal-use-but-company-leaves-the-door-open-to-broader-rollout-firm-says-it-will-have-its-hands-full-with-jalapeno-for-a-good-long-time). 2026.
