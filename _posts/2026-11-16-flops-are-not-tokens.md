@@ -44,10 +44,9 @@ This post walks that chain once, with Trainium3 as the worked example, and shows
 
 | Chip | Type | Availability | Design focus |
 | --- | --- | --- | --- |
-| <b>NVIDIA</b> B300 | General-purpose GPU | Available | Flexible GPUs on CUDA, with NVLink rack-scale domains |
-| <b>AMD</b> Instinct MI355X | General-purpose GPU | Available | Flexible GPUs on ROCm |
+| <b>NVIDIA</b> B300 | General-purpose GPU | Available | GPUs programmed through CUDA, with NVLink rack-scale domains |
+| <b>AMD</b> Instinct MI355X | General-purpose GPU | Available | GPUs programmed through ROCm |
 | <b>AWS Trainium3</b> (Trn3 Gen2 UltraServer, 144 chips) | Hyperscaler ASIC for training and inference | Available on Amazon EC2 | Software-scheduled ASIC: compiler-managed SRAM, dedicated collective cores per chip, and a 144-chip scale-up domain |
-| <b>OpenAI Jalapeño</b> | Inference-only ASIC | OpenAI internal use | Inference ASIC built around OpenAI's own serving patterns, with HBM bandwidth per watt as the priority |
 
 ### The ten rules that explain everything below
 
@@ -70,7 +69,7 @@ This post walks that chain once, with Trainium3 as the worked example, and shows
 
 A GPU is thousands of programmable workers sharing caches the hardware manages. An ASIC such as Trainium uses a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
 
-<figure><img src="/assets/img/flops-are-not-tokens/hierarchy-v4.svg" alt="hierarchy v4" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/hierarchy-v4.svg?v=2" alt="hierarchy v4" loading="lazy"></figure>
 
 Both designs keep model weights and the KV cache in HBM and stage them into software-managed on-chip SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is the path between HBM and that SRAM. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp.
 
@@ -78,13 +77,13 @@ Trainium3 moves data from HBM into SBUF with explicit DMA instead of a hardware 
 
 ### Across the chips: anatomy
 
-|  | GPU | AWS Trainium3 | OpenAI Jalapeño |
-| --- | --- | --- | --- |
-| Compute units | Many streaming multiprocessors (NVIDIA) or compute units (AMD), each with matrix cores and SIMD lanes | 8 NeuronCore-v4, each a 128×128 systolic array plus vector, scalar, and GpSimd engines | Not disclosed |
-| On-chip memory | Small shared memory per SM or CU, plus hardware-managed caches | 256 MiB software-managed SBUF (32 MiB per core) | Not disclosed |
-| Control | Hardware warp (NVIDIA) or wavefront (AMD) schedulers | Per-engine instruction streams built by the compiler or NKI, synchronized by hardware semaphores; ISA extensions for dynamic shapes and control flow | Not disclosed |
-| Collectives | NCCL or RCCL, by default as kernels on the SMs or CUs | Neuron collectives on dedicated collective cores (CC-Cores) | Not disclosed |
-| Low-precision formats (all also run BF16 and FP16) | FP8 plus several microscaled FP8, FP6, and FP4 formats | FP8, MXFP8, MXFP4 | MXFP8, MXFP4 |
+|  | GPU | AWS Trainium3 |
+| --- | --- | --- |
+| Compute units | Many streaming multiprocessors (NVIDIA) or compute units (AMD), each with matrix cores and SIMD lanes | 8 NeuronCore-v4, each a 128×128 systolic array plus vector, scalar, and GpSimd engines |
+| On-chip memory | Small shared memory per SM or CU, plus hardware-managed caches | 256 MiB software-managed SBUF (32 MiB per core) |
+| Control | Hardware warp (NVIDIA) or wavefront (AMD) schedulers | Per-engine instruction streams built by the compiler or NKI, synchronized by hardware semaphores; ISA extensions for dynamic shapes and control flow |
+| Collectives | NCCL or RCCL, by default as kernels on the SMs or CUs | Neuron collectives on dedicated collective cores (CC-Cores) |
+| Low-precision formats (all also run BF16 and FP16) | FP8 plus several microscaled FP8, FP6, and FP4 formats | FP8, MXFP8, MXFP4 |
 
 ### Why build an ASIC at all
 
@@ -106,19 +105,19 @@ A large model runs across many chips, so the unit to reason about is the system 
 |  | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
 | Chips | 144 Trainium3 (36 servers × 4) |
-| Peak low-precision compute (MXFP8/MXFP4) | 362.448 PF |
+| Peak low-precision compute (MXFP8/MXFP4) | 362.45 PF |
 | HBM capacity (nominal) | 20.7 TB |
 | HBM bandwidth | 705.6 TB/s |
 | Scale-up | NeuronLink-v4, 2,560 GB/s per chip (both directions) |
 
 Trainium3 supports FP8, MXFP8, and MXFP4, with peak low-precision compute (MXFP8/MXFP4) of 2.517 PF per chip, and FP4 pays off where decode is limited: bytes. MXFP4 stores 4.25 bits per weight, one shared 8-bit scale per 32 values included, so Llama 3.3 70B's weights (the running example, Section 3) shrink from 70.55 GB to 37.48 GB. Every decode step reads 53.125% of the weight bytes, and the freed HBM holds more KV cache, which means more conversations per chip.
 
-<b>Kernel workflow.</b> A new operator becomes a Triton or CUDA kernel on GPUs and an NKI kernel on Trainium, often starting from the open-source NKI Library.
+<b>Kernel workflow.</b> On GPUs, a new operator becomes a Triton or CUDA kernel. On Trainium, the Neuron compiler compiles it, and an NKI kernel, often starting from the open-source NKI Library, takes over where hand tuning pays off.
 
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
 
-<b>Interview Lens:</b> <i>How do you compare accelerators built from chips of different sizes?</i> Normalize to the system that serves the model: compute, HBM capacity, and HBM bandwidth, then divide by dollars or watts. Chip count is a packaging choice: 144 Trainium3 chips add up to 362.448 PF of MXFP8/MXFP4 compute, 20.7 TB of HBM, and 705.6 TB/s in one Trn3 Gen2 UltraServer.
+<b>Interview Lens:</b> <i>How do you compare accelerators built from chips of different sizes?</i> Normalize to the system that serves the model: compute, HBM capacity, and HBM bandwidth, then divide by dollars or watts. Chip count is a packaging choice: 144 Trainium3 chips add up to 362.45 PF of MXFP8/MXFP4 compute, 20.7 TB of HBM, and 705.6 TB/s in one Trn3 Gen2 UltraServer.
 
 </div>
 
@@ -128,7 +127,7 @@ Trainium3 supports FP8, MXFP8, and MXFP4, with peak low-precision compute (MXFP8
 
 <b>Prefill</b> reads the whole prompt at once: lots of math, very parallel. <b>Decode</b> writes one token at a time: very little math per step, but every step re-reads the weights (only the active experts in a MoE model) and each sequence's KV cache.
 
-<figure><img src="/assets/img/flops-are-not-tokens/prefill-decode-v3.svg" alt="prefill decode v3" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/prefill-decode-v3.svg?v=2" alt="prefill decode v3" loading="lazy"></figure>
 
 <b>Deep dive: tensor shapes.</b>
 
@@ -147,7 +146,7 @@ Changing <b>S to 1</b> is the whole story: the same weight matrix, multiplied by
 
 For FP8 decode, the weight reads alone give an arithmetic intensity of <b>2 × batch</b> FLOPs per byte (each weight byte does one multiply-add per sequence in the batch). For prefill it is 2 × batch × prompt length: one 8K-token prompt gives 16,384 FLOP/B, far above the Trainium3 ridge.
 
-<figure><img src="/assets/img/flops-are-not-tokens/roofline-trainium-gens.svg" alt="Roofline per system for the Trn2, Trn3 Gen1, and Trn3 Gen2 UltraServers, from published peak specifications." loading="lazy"><figcaption>Roofline per system for the Trn2, Trn3 Gen1, and Trn3 Gen2 UltraServers, from published peak specifications.</figcaption></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/roofline-trainium-gens.svg?v=2" alt="Roofline per system for the Trn2, Trn3 Gen1, and Trn3 Gen2 UltraServers, from published peak specifications." loading="lazy"><figcaption>Roofline per system for the Trn2, Trn3 Gen1, and Trn3 Gen2 UltraServers, from published peak specifications.</figcaption></figure>
 
 <b>How the roofline moves from Trainium2 to Trainium3.</b> The Trn2 and Trn3 Gen1 UltraServers both hold 64 chips, so comparing them separates the chip generation from the system size. Dense 8-bit compute grows 1.936x and HBM bandwidth 1.690x, so the ridge point moves from 448.28 to 513.67 FLOP/B, and the weight-only ridge-point batch moves from 225 to 257. Counting KV cache traffic as well, long-context decode stays below the ridge on all three systems (Section 4). Scaling Trn3 from 64 to 144 chips raises both ceilings by the same factor and leaves the ridge point at 513.67 FLOP/B. Every long-context decode marker sits left of all three ridge points, so for long-context decode the bandwidth increase is what raises the ceiling. More compute raises the flat roof; more bandwidth raises the slanted one.
 
@@ -163,7 +162,7 @@ Minimum time per decode step on one Trn3 server = 70.55 GB of weights ÷ 19.6 TB
 
 |  | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
-| One copy of the weights | One Trn3 server: 4 chips, 576 GB of HBM, 19.6 TB/s |
+| One copy of the weights | One Trn3 server: 4 chips, 576 GiB of HBM, 19.6 TB/s |
 | Minimum time per token | 3.60 ms |
 | Max tokens/s for one user | 277.8 |
 | Ridge point | 513.67 FLOP/B |
@@ -216,19 +215,19 @@ FP8 stores each of Llama 3.3 70B's 70.55 billion parameters in 8 bits, one byte,
 
 |  | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
-| HBM | 20.7 TB |
+| HBM | 20.7 TB (20,736 GiB) |
 | HBM bandwidth | 705.6 TB/s |
-| HBM left for KV cache (36 copies of the weights) | 18,196.1 GB |
-| 4K-token sequences that fit | 27,108 |
-| 32K-token sequences that fit | 3,384 |
-| Arithmetic intensity at the 4K max batch | 198.55 FLOP/B |
-| Share of the ridge point | 38.65% |
+| HBM left for KV cache (36 copies of the weights) | 18,370.5 GiB |
+| 4K-token sequences that fit | 29,376 |
+| 32K-token sequences that fit | 3,672 |
+| Arithmetic intensity at the 4K max batch | 200.44 FLOP/B |
+| Share of the ridge point | 39.02% |
 
-Each 576 GB of HBM, one Trn3 server, holds one copy of the weights and 753 conversations at 4K. The UltraServer holds 36 such copies and reads all of their KV cache at 705.6 TB/s.
+Each 576 GiB of HBM, one Trn3 server, holds one copy of the weights and 816 conversations at 4K. The UltraServer holds 36 such copies and reads all of their KV cache at 705.6 TB/s.
 
-<figure><img src="/assets/img/flops-are-not-tokens/intensity-vs-batch.svg" alt="Decode arithmetic intensity against batch on one Trn3 server, for 4K, 8K, 32K, and 128K contexts. Each curve flattens toward its ceiling as KV traffic grows with the batch, and every ceiling sits below the 513.67 FLOP/B ridge." loading="lazy"><figcaption>Decode arithmetic intensity against batch on one Trn3 server, for 4K, 8K, 32K, and 128K contexts. Each curve flattens toward its ceiling as KV traffic grows with the batch, and every ceiling sits below the 513.67 FLOP/B ridge.</figcaption></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/intensity-vs-batch.svg?v=2" alt="Decode arithmetic intensity against batch on one Trn3 server, for 4K, 8K, 32K, and 128K contexts. Each curve flattens toward its ceiling as KV traffic grows with the batch, and every ceiling sits below the 513.67 FLOP/B ridge." loading="lazy"><figcaption>Decode arithmetic intensity against batch on one Trn3 server, for 4K, 8K, 32K, and 128K contexts. Each curve flattens toward its ceiling as KV traffic grows with the batch, and every ceiling sits below the 513.67 FLOP/B ridge.</figcaption></figure>
 
-<b>The key insight.</b> For long-context decode, the bottleneck is bytes, not FLOPS. Even with HBM packed full of conversations, at 4K context or longer, the workload's arithmetic intensity stays at 38.65% of the ridge point or less, because KV traffic grows with every sequence you add. Memory bandwidth, HBM capacity, and KV cache design set decode speed, while extra peak FLOPS barely move it. The levers that help are <b>HBM bandwidth and capacity per dollar or per watt</b>, and <b>fewer KV bytes per token</b>, through MLA or sub-8-bit KV quantization.
+<b>The key insight.</b> For long-context decode, the bottleneck is bytes, not FLOPS. Even with HBM packed full of conversations, at 4K context or longer, the workload's arithmetic intensity stays at 39.02% of the ridge point or less, because KV traffic grows with every sequence you add. Memory bandwidth, HBM capacity, and KV cache design set decode speed, while extra peak FLOPS barely move it. The levers that help are <b>HBM bandwidth and capacity per dollar or per watt</b>, and <b>fewer KV bytes per token</b>, through MLA or sub-8-bit KV quantization.
 
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
@@ -259,9 +258,9 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 
 ### Across the chips: energy strategy
 
-|  | NVIDIA | AMD | AWS Trainium | OpenAI Jalapeño |
-| --- | --- | --- | --- | --- |
-| Main lever | Lower-precision formats such as NVFP4: fewer bytes per weight | Advanced process nodes and chiplets: more math per watt | Explicitly scheduled SRAM reuse (compiler or NKI); collectives on dedicated CC-Cores | Bandwidth first: HBM bandwidth per watt |
+|  | NVIDIA | AMD | AWS Trainium |
+| --- | --- | --- | --- |
+| Main lever | Lower-precision formats such as NVFP4: fewer bytes per weight | Advanced process nodes and chiplets: more math per watt | Explicitly scheduled SRAM reuse (compiler or NKI); collectives on dedicated CC-Cores |
 
 <b>Across generations.</b> Trn3 UltraServers deliver over 5x the output tokens per megawatt of Trn2 UltraServers at similar latency per user.
 
@@ -292,10 +291,10 @@ The example is generic: on Trainium, which operand stays stationary in the 128×
 
 ### Across the chips: matrix unit granularity
 
-|  | NVIDIA | AMD | AWS Trainium | OpenAI Jalapeño |
-| --- | --- | --- | --- | --- |
-| Matrix unit | Tensor Core MMA on fixed-size tiles per thread block | MFMA on fixed-size blocks per wavefront | 128×128 systolic array per NeuronCore | Not disclosed |
-| Small-batch handling | Many small tiles run concurrently across SMs; split-K and stream-K | Small MFMA tiles; split-K and stream-K in hipBLASLt | Stationary operand loaded into the array, moving operand streamed; dynamic-shape ISA support can reduce padded shape buckets | Not disclosed |
+|  | NVIDIA | AMD | AWS Trainium |
+| --- | --- | --- | --- |
+| Matrix unit | Tensor Core MMA on fixed-size tiles per thread block | MFMA on fixed-size blocks per wavefront | 128×128 systolic array per NeuronCore |
+| Small-batch handling | Many small tiles run concurrently across SMs; split-K and stream-K | Small MFMA tiles; split-K and stream-K in hipBLASLt | Stationary operand loaded into the array, moving operand streamed; dynamic-shape ISA support can reduce padded shape buckets |
 
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
@@ -342,7 +341,6 @@ Domain size sets how far expert parallelism can spread on the fast fabric. Colle
 | NVIDIA rack-scale NVLink systems | One rack of GPUs | NVLink | NCCL on the SMs; in-switch reduction | RDMA |
 | AMD MI355X | One node of GPUs | Infinity Fabric | RCCL on the CUs | RDMA over Ethernet |
 | AWS Trn3 UltraServer (Gen2) | 144 chips: 36 servers × 4 Trainium3 chips, across racks | NeuronLink-v4 through NeuronSwitch-v1: 2,560 GB/s per chip (both directions): 1,024 GB/s within a server, 1,280 GB/s across servers in a rack, 256 GB/s across racks | Neuron collectives on dedicated CC-Cores | EFA, 57,600 Gb/s per UltraServer |
-| OpenAI Jalapeño | One rack of chips | Ethernet | Not disclosed | Ethernet across racks |
 
 <b>The design bets:</b>
 
@@ -358,7 +356,7 @@ GPT-OSS 120B is a MoE model with 36 layers, 128 experts per layer, and 4 experts
 | Pool | Parallelism | Placement |
 | --- | --- | --- |
 | Decode | TP8 × DP16 = 128 ranks; EP128, one expert per rank | One Trn3 instance (16 Trainium3 chips, 128 NeuronCores), one logical core per physical core |
-| Prefill | Six replicas, each TP4 with EP2 | One Trn3 instance, 24 of its 64 logical NeuronCores, two physical cores per logical core |
+| Prefill | Six replicas, each TP4 with EP2 | Each replica takes 4 of a Trn3 instance's 64 logical NeuronCores, two physical cores per logical core, and 16 replicas fill an instance in production |
 | Between pools | KV cache handed from prefill to decode | NIXL over EFA |
 
 <b>Decode: one expert per core.</b> With 128 experts and 128 ranks, each NeuronCore holds one expert of every layer, and the expert all-to-all stays inside one instance on NeuronLink. One NKI megakernel runs all 36 decoder layers of a decode step, one kernel call per step instead of one per layer, and the KV cache is FP8. Each of the 16 data-parallel ranks takes 8 sequences, 128 concurrent requests per decode instance; the cap of 8 is 128 × TP ÷ EP.
@@ -386,7 +384,7 @@ Interconnect bandwidth can matter more than another few hundred TFLOPS.
 
 A chip is only as fast as the code that runs on it, which is why the compiler and kernel stack matter as much as the silicon.
 
-<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v3.svg" alt="software stacks v3" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v3.svg?v=2" alt="software stacks v3" loading="lazy"></figure>
 
 <b>Compilers and kernels.</b> Both platforms pair a compiler with hand-written kernels. A compiler fuses most of the graph (torch.compile on GPUs, the Neuron compiler on Trainium), and performance-critical operators are hand-tuned kernels (CUDA or Triton on GPUs, NKI on Trainium). The difference is scheduling: the Neuron compiler also plans every DMA transfer and engine instruction stream, work that GPU caches and warp schedulers partly absorb at run time:
 
@@ -394,7 +392,7 @@ A chip is only as fast as the code that runs on it, which is why the compiler an
 Model graph → compiler IR → fusion → tiling → SRAM placement → engine scheduling → accelerator instructions
 ```
 
-Between NVIDIA and AMD the names differ but the concepts map closely; porting usually fails on tile shapes and wave-size assumptions, not syntax.
+Between NVIDIA and AMD the names differ but the concepts map closely.
 
 <b>From GPU to Trainium, the execution model changes:</b> Trainium replaces warps and the hardware warp scheduler with compiled instruction streams: each engine runs its own stream asynchronously, and the compiler inserts semaphore synchronization between them. Occupancy gives way to overlap: the instruction streams must keep DMA transfers and the Tensor, Vector, Scalar, and GpSimd engines busy at the same time. Coalescing survives as DMA efficiency: a transfer needs at least 2 KiB of contiguous data per partition to approach peak bandwidth, and one large DMA beats many small ones. On top of that, you reason about SBUF partition layout and which operand stays stationary in the systolic array.
 
@@ -402,16 +400,16 @@ Between NVIDIA and AMD the names differ but the concepts map closely; porting us
 
 ### Across the chips: the kernel level
 
-| Concept | NVIDIA | AMD | AWS Trainium | OpenAI Jalapeño |
-| --- | --- | --- | --- | --- |
-| Write a fused kernel in | CUDA, Triton, CUTLASS/CuTe | HIP, Triton, Composable Kernel | NKI (Python, direct ISA access) or the open-source NKI Library; Neuron compiler for the rest of the graph | Internal only |
-| Execution unit | SM, warps of threads | CU, wavefronts of threads | NeuronCore-v4: Tensor, Vector, Scalar, GpSimd engines. No warps | Not disclosed |
-| Programmer SRAM | Shared memory | LDS | SBUF: 32 MiB per core, 128 partitions | Not disclosed |
-| Accumulators | Registers; Tensor Memory on Blackwell | VGPRs / AGPRs | PSUM: 2 MiB per core | Not disclosed |
-| HBM to SRAM movement | TMA, async copies | Global / buffer loads | 128 DMA engines per chip, explicit in NKI, scheduled by the compiler | Not disclosed |
-| Latency hiding | Hardware swaps warps | Hardware swaps wavefronts | Overlapped engine instruction streams: double-buffered tiles, semaphores between engines | Not disclosed |
-| Profile with | Nsight Systems / Compute | rocprof, ROCm Compute Profiler | Neuron Explorer (neuron-profile) | Internal |
-| Ecosystem | CUDA libraries and community kernels | ROCm, Composable Kernel, and upstream framework support | Open source: NKI Library, TorchNeuron, vLLM Neuron | Internal |
+| Concept | NVIDIA | AMD | AWS Trainium |
+| --- | --- | --- | --- |
+| Write a fused kernel in | CUDA, Triton, CUTLASS/CuTe | HIP, Triton, Composable Kernel | NKI (Python, direct ISA access) or the open-source NKI Library; Neuron compiler for the rest of the graph |
+| Execution unit | SM, warps of threads | CU, wavefronts of threads | NeuronCore-v4: Tensor, Vector, Scalar, GpSimd engines. No warps |
+| Programmer SRAM | Shared memory | LDS | SBUF: 32 MiB per core, 128 partitions |
+| Accumulators | Registers; Tensor Memory on Blackwell | VGPRs / AGPRs | PSUM: 2 MiB per core |
+| HBM to SRAM movement | TMA, async copies | Global / buffer loads | 128 DMA engines per chip, explicit in NKI, scheduled by the compiler |
+| Latency hiding | Hardware swaps warps | Hardware swaps wavefronts | Overlapped engine instruction streams: double-buffered tiles, semaphores between engines |
+| Profile with | Nsight Systems / Compute | rocprof, ROCm Compute Profiler | Neuron Explorer (neuron-profile) |
+| Ecosystem | CUDA libraries and community kernels | ROCm, Composable Kernel, and upstream framework support | Native PyTorch (TorchNeuron), vLLM Neuron, SGLang-Neuron, and the open-source NKI Library |
 
 ---
 
@@ -469,9 +467,9 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 | Scenario | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
-| A. Prefill | 362.448 PF of peak low-precision compute (MXFP8/MXFP4) |
+| A. Prefill | 362.45 PF of peak low-precision compute (MXFP8/MXFP4) |
 | B. Low-latency decode | 3.60 ms minimum per token (Section 3) |
-| C. Long context | 20.7 TB of HBM; 3,384 conversations at 32K |
+| C. Long context | 20.7 TB of HBM; 3,672 conversations at 32K |
 | D. MoE | One 144-chip NeuronLink-v4 domain; collectives on dedicated CC-Cores |
 | E. Speculative decoding | EAGLE3 in vLLM Neuron |
 
@@ -488,7 +486,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 Prefill wants compute. Decode wants bandwidth, KV capacity, and energy efficiency. Running both on the same chip can make each stall the other. Split them into two pools, and let each pool use the hardware that fits its job.
 
-<figure><img src="/assets/img/flops-are-not-tokens/diagram4-pd-disaggregation.svg" alt="diagram4 pd disaggregation" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/diagram4-pd-disaggregation.svg?v=2" alt="diagram4 pd disaggregation" loading="lazy"></figure>
 
 TTFT and TPOT get separate targets and separate tuning. And each pool can be sized for its own stage: FLOPS per dollar for prefill, HBM bandwidth per dollar for decode.
 
@@ -529,9 +527,9 @@ Memory check (Little's law)
 Link check             λ · P · KV bytes per token ≤ link bandwidth
 ```
 
-<figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v4.svg" alt="capacity planning v4" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v4.svg?v=2" alt="capacity planning v4" loading="lazy"></figure>
 
-<figure class="embed"><iframe class="embed-frame" data-embed="fleet-sizer" src="/assets/embeds/fleet-sizer.html" title="Prefill/Decode Fleet Sizer" loading="lazy"></iframe></figure>
+<figure class="embed"><iframe class="embed-frame" data-embed="fleet-sizer" src="/assets/embeds/fleet-sizer.html?v=2" title="Prefill/Decode Fleet Sizer" loading="lazy"></iframe></figure>
 
 
 <b>The shape of the traffic sets the fleet.</b> Two published InferenceX sequence shapes, and real multi-turn chat traffic:
@@ -554,10 +552,10 @@ decode cost per token  ∝  system cost (or power) ÷ delivered HBM bandwidth
 
 For a Trn3 Gen2 UltraServer the denominator is 705.6 TB/s per system. In production, measured decode throughput replaces peak bandwidth, since kernels, MoE routing, and software shift it.
 
-<b>Sizing the decode pool.</b> In the 1K in / 8K out shape, decode tokens outnumber prefill tokens 8 to 1, so the decode pool is most of the fleet. Three numbers size it:
+<b>Sizing the decode pool.</b> In the 1K in / 8K out shape, decode tokens outnumber prefill tokens 8 to 1, and each node generates decode tokens more slowly than it processes prompt tokens, so the decode pool is most of the fleet. Three numbers size it:
 
 - <b>HBM bandwidth per dollar</b> sets cost per output token, because bytes per second generate decode tokens.
-- <b>HBM capacity</b> sets concurrent conversations: 753 per Trn3 server at 4K (Section 4).
+- <b>HBM capacity</b> sets concurrent conversations: 816 per Trn3 server at 4K (Section 4).
 - <b>Disaggregation</b> (Section 11) lets the pool grow apart from prefill. vLLM Neuron runs prefill and decode as separate Trainium pools and moves the KV cache between them over EFA.
 
 <div class="callout callout-gray" markdown="1">
@@ -619,7 +617,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 <div class="callout callout-purple" markdown="1">
 <span class="callout-icon">🧩</span>
 
-<b>One question to leave you with.</b> On Trainium every decision is explicit, and a good schedule keeps every engine busy. Someone has to choose which matrix stays stationary in a 128×128 systolic array, what lives in 32 MiB of SBUF per core, and when each of 128 DMA engines fires. The Neuron compiler makes those choices automatically, and NKI gives kernel engineers direct control when they want it. So what does one attention layer look like on Trainium, and where does a custom NKI kernel beat the compiler?
+<b>One question to leave you with.</b> On Trainium every decision is explicit, and a good schedule keeps every engine busy. Each of these is a choice: which matrix stays stationary in a 128×128 systolic array, what lives in 32 MiB of SBUF per core, and when each of 128 DMA engines fires. The Neuron compiler makes those choices automatically, and NKI gives kernel engineers direct control when they want it. So what does one attention layer look like on Trainium, and where does a custom NKI kernel beat the compiler?
 
 </div>
 
@@ -630,6 +628,8 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 ---
 
 ## References
+
+<div class="refs" markdown="1" style="font-size:0.85em;line-height:1.55">
 
 Web pages accessed November 2026.
 
@@ -668,4 +668,5 @@ Web pages accessed November 2026.
 33. OpenAI. [gpt-oss-120b and gpt-oss-20b Model Card](https://cdn.openai.com/pdf/419b6906-9da6-406c-a19d-1bb078ac7637/oai_gpt-oss_model_card.pdf). 2025.
 34. LMSYS. [SGLang-Neuron v0.1.0: SGLang's Serving Stack on AWS Trainium](https://www.lmsys.org/blog/2026-11-12-sglang-neuron-v0.1.0). 2026.
 35. OpenAI. [OpenAI and Broadcom: Jalapeño](https://openai.com/index/openai-broadcom-jalapeno-inference-chip/). 2026.
-36. Tom's Hardware. [Jalapeño is for OpenAI's internal use](https://www.tomshardware.com/tech-industry/artificial-intelligence/openais-custom-jalapeno-ai-inference-asic-is-for-openais-internal-use-but-company-leaves-the-door-open-to-broader-rollout-firm-says-it-will-have-its-hands-full-with-jalapeno-for-a-good-long-time). 2026.
+
+</div>
