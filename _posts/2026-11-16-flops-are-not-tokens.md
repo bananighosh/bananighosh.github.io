@@ -83,7 +83,7 @@ Trainium3 moves data from HBM into SBUF with explicit DMA instead of a hardware 
 | On-chip memory | Small shared memory per SM or CU, plus hardware-managed caches | 256 MiB software-managed SBUF (32 MiB per core) |
 | Control | Hardware warp (NVIDIA) or wavefront (AMD) schedulers | Per-engine instruction streams built by the compiler or NKI, synchronized by hardware semaphores; ISA extensions for dynamic shapes and control flow |
 | Collectives | NCCL or RCCL, by default as kernels on the SMs or CUs | Neuron collectives on dedicated collective cores (CC-Cores) |
-| Low-precision formats (all also run BF16 and FP16) | FP8 plus several microscaled FP8, FP6, and FP4 formats | FP8, MXFP8, MXFP4 |
+| Low-precision formats (all also run BF16 and FP16) | FP8, MXFP8, MXFP4 | FP8, MXFP8, MXFP4 |
 
 ### Why build an ASIC at all
 
