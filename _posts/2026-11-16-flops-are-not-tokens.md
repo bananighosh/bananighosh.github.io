@@ -71,7 +71,7 @@ This post walks that chain once, with Trainium3 as the worked example, and shows
 
 A GPU is thousands of programmable workers sharing caches the hardware manages. An ASIC such as Trainium uses a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
 
-<figure><img src="/assets/img/flops-are-not-tokens/hierarchy-v4.svg?v=2" alt="Memory hierarchy of a GPU and of Trainium3: HBM, a hardware-managed cache or 128 software-managed DMA engines, on-chip SRAM, and the matrix and vector engines." loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/hierarchy-v4.svg?v=3" alt="Memory hierarchy of a GPU and of Trainium3: HBM, a hardware-managed cache or 128 software-managed DMA engines, on-chip SRAM, and the matrix and vector engines." loading="lazy"></figure>
 
 Both designs keep model weights and the KV cache in HBM and stage them into software-managed on-chip SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is the path between HBM and that SRAM. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp.
 
@@ -82,7 +82,7 @@ Trainium3 moves data from HBM into SBUF with explicit DMA instead of a hardware 
 |  | GPU | AWS Trainium3 |
 | --- | --- | --- |
 | Compute units | Many streaming multiprocessors (NVIDIA) or compute units (AMD), each with matrix cores and SIMD lanes | 8 NeuronCore-v4, each a 128×128 systolic array plus vector, scalar, and GpSimd engines |
-| On-chip memory | Small shared memory per SM or CU, plus hardware-managed caches | 256 MiB software-managed SBUF (32 MiB per core) |
+| On-chip memory | Shared memory per SM (NVIDIA) or LDS per CU (AMD), plus hardware-managed caches | SBUF, software-managed: 32 MiB per NeuronCore, 256 MiB per chip |
 | Control | Hardware warp (NVIDIA) or wavefront (AMD) schedulers | Per-engine instruction streams built by the compiler or NKI, synchronized by hardware semaphores; ISA extensions for dynamic shapes and control flow |
 | Collectives | NCCL or RCCL, by default as kernels on the SMs or CUs | Neuron collectives on dedicated collective cores (CC-Cores) |
 | Low-precision formats (all also run BF16 and FP16) | FP8, MXFP8, MXFP4 | FP8, MXFP8, MXFP4 |
@@ -95,7 +95,7 @@ Think of a kitchen equipped for any cuisine against one built only for ramen. Th
 
 What this buys, beyond cost:
 
-- <b>Collectives on dedicated cores.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. Trainium3 ships dedicated CC-Cores on every chip.
+- <b>Collectives on dedicated hardware.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. On Trainium3, Neuron Collectives runs them on 16 dedicated CC-Cores per chip, which direct the DMA engines that move the data, so collectives do not run on the NeuronCore compute engines.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
 - <b>Large scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1.
 - <b>Performance per watt across generations.</b> The Trn3 UltraServer delivers 4x better performance per watt than the Trn2 UltraServer.
@@ -312,7 +312,7 @@ The example is generic: on Trainium, which operand stays stationary in the 128×
 
 Large models span many chips, and chips must talk every layer. The <b>α–β model</b> gives the cost of each message: sending n bytes takes α + n ÷ β, where α is the fixed startup latency every message pays before any bytes flow and β is the link bandwidth. Small messages are dominated by α, large messages by n ÷ β.
 
-<figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-v4.svg" alt="Scale hierarchy: chip, scale-up domain over the fast interconnect, and scale-out network, with the parallelism that fits each level." loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-v4.svg?v=3" alt="Scale hierarchy: chip, scale-up domain over the fast interconnect, and scale-out network, with the parallelism that fits each level." loading="lazy"></figure>
 
 ```txt
 Message time = α (startup latency) + size ÷ β (bandwidth)
@@ -461,7 +461,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 <b>D. Mixture of Experts.</b> Each layer adds two all-to-alls, and the busiest device sets the pace. A large scale-up domain keeps that traffic off the scale-out network: the GPT-OSS 120B deployment in Section 7 keeps it inside one Trn3 instance.
 
-<figure><img src="/assets/img/flops-are-not-tokens/moe-layer-v2.svg" alt="One MoE layer: router, all-to-all dispatch to experts, expert compute, and all-to-all combine." loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/moe-layer-v2.svg?v=3" alt="One MoE layer: router, all-to-all dispatch to experts, expert compute, and all-to-all combine." loading="lazy"></figure>
 
 <b>E. Speculative decoding.</b> A small draft proposes K tokens and the target model verifies them in one pass, turning 1-row decode into (K+1)-row decode: higher arithmetic intensity, fuller tiles. If each draft token is accepted with probability p, one verification step emits (1 − p^(K+1)) ÷ (1 − p) tokens on average, so the gain grows with p and with how cheap the draft is. Gains shrink at high batch because batching already used the spare compute, so the best K falls as batch size rises.
 
