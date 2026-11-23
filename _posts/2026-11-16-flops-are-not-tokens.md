@@ -255,7 +255,7 @@ Bytes read per decode token (70.55 GB of FP8 weights):
 
 The 45 nm figures show the size of the gap between moving data and computing on it, not modern absolute values. At batch 1, decode does two FLOPs for every byte it pulls from HBM, so almost all of its energy goes to moving weights. Batching divides the weight bytes per token, which makes <b>batching an energy optimization, not only a throughput one</b>.
 
-Three levers cut energy per token: keep more data on chip, move fewer bits per value, and spend silicon and power on data movement rather than on flexibility decode does not use.
+Three levers cut energy per token: keep more data on chip, move fewer bits per value, and spend silicon and power on data movement.
 
 ### Across the chips: energy strategy
 
