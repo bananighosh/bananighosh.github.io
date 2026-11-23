@@ -232,7 +232,7 @@ Each 576 GiB of HBM, one Trn3 server, holds one copy of the weights and 816 conv
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
 
-<b>Interview Lens:</b> <i>Why can no chip make long-context GQA decode compute-bound?</i> Every sequence brings its own KV bytes, so arithmetic intensity converges to a per-sequence limit far below any ridge point. Raising that limit takes fewer KV bytes per token, as with MLA or KV quantization, or more queries per KV read, as with speculative decoding.
+<b>Interview Lens:</b> <i>Why does long-context GQA decode stay memory-bound at any batch size?</i> Every sequence brings its own KV bytes, so arithmetic intensity converges to a per-sequence limit: 42.28 FLOP/B at 32K, far below the Trainium3 ridge of 513.67 FLOP/B. Raising that limit takes fewer KV bytes per token, as with MLA or KV quantization, or more queries per KV read, as with speculative decoding.
 
 </div>
 
@@ -260,7 +260,7 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 
 |  | NVIDIA | AMD | AWS Trainium |
 | --- | --- | --- | --- |
-| Main lever | Lower-precision formats such as NVFP4: fewer bytes per weight | Advanced process nodes and chiplets: more math per watt | Explicitly scheduled SRAM reuse (compiler or NKI); collectives on dedicated CC-Cores |
+| Main lever | Lower-precision formats: fewer bytes per weight | Advanced process nodes and chiplets: more math per watt | Explicitly scheduled SRAM reuse (compiler or NKI); collectives on dedicated CC-Cores |
 
 <b>Across generations.</b> Trn3 UltraServers deliver over 5x the output tokens per megawatt of Trn2 UltraServers at similar latency per user.
 
@@ -561,7 +561,7 @@ For a Trn3 Gen2 UltraServer the denominator is 705.6 TB/s per system. In product
 <div class="callout callout-gray" markdown="1">
 <span class="callout-icon">🎯</span>
 
-<b>Interview Lens:</b> <i>You doubled prefill nodes and TTFT did not improve. Why?</i> Decode is probably the bottleneck: if the decode instance streams the first token, handed-off requests waiting for decode slots add to TTFT. Recompute both pools from λ·P and λ·O, and check decode KV capacity with Little's law.
+<b>Interview Lens:</b> <i>You doubled prefill nodes and TTFT did not improve. Why?</i> Prefill was not the bottleneck. If the decode instance streams the first token, handed-off requests waiting for decode slots add to TTFT. Recompute both pools from λ·P and λ·O, and check decode KV capacity with Little's law.
 
 </div>
 
