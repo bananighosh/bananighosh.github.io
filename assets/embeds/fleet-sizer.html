@@ -90,7 +90,7 @@ footer{font-size:12px;color:var(--muted);max-width:80ch}
 
       <h2>Per-node throughput (yours)</h2>
       <div class="row2">
-        <div class="field"><label for="mup">Prefill <span class="sym">μ_p</span></label><input id="mup" type="number" min="1" step="any" value=""><span style="font-size:12px;color:var(--muted)">prompt tokens/s per node</span></div>
+        <div class="field"><label for="mup">Prefill <span class="sym">μ_p</span></label><input id="mup" type="number" min="1" step="any" value=""><span style="font-size:12px;color:var(--muted)">prompt tokens/s per node; default is the peak ceiling, measured is lower</span></div>
         <div class="field"><label for="mud">Decode <span class="sym">μ_d</span></label><input id="mud" type="number" min="1" step="any" value=""><span style="font-size:12px;color:var(--muted)">output tokens/s per node</span></div>
       </div>
       <div class="field"><label for="tpot">Time per output token <span class="sym">TPOT</span></label><input id="tpot" type="number" min="0.001" step="any" value=""><span style="font-size:12px;color:var(--muted)">seconds, at the decode batch you run</span></div>
