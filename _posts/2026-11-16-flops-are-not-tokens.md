@@ -84,7 +84,7 @@ Trainium3 moves data from HBM into SBUF with explicit DMA instead of a hardware 
 | Compute units | Many streaming multiprocessors (NVIDIA) or compute units (AMD), each with matrix cores and SIMD lanes | 8 NeuronCore-v4, each a 128×128 systolic array plus vector, scalar, and GpSimd engines |
 | On-chip memory | Shared memory per SM (NVIDIA) or LDS per CU (AMD), plus hardware-managed caches | SBUF, software-managed: 32 MiB per NeuronCore, 256 MiB per chip |
 | Control | Hardware warp (NVIDIA) or wavefront (AMD) schedulers | Per-engine instruction streams built by the compiler or NKI, synchronized by hardware semaphores; ISA extensions for dynamic shapes and control flow |
-| Collectives | NCCL or RCCL, by default as kernels on the SMs or CUs | Neuron collectives on dedicated collective cores (CC-Cores) |
+| Collectives | NCCL or RCCL, by default as kernels on the SMs or CUs | Neuron Collective Communication Library (libnccom) on dedicated collective cores (CC-Cores) |
 | Low-precision formats (all also run BF16 and FP16) | FP8, MXFP8, MXFP4 | FP8, MXFP8, MXFP4 |
 
 ### Why build an ASIC at all
@@ -95,7 +95,7 @@ Think of a kitchen equipped for any cuisine against one built only for ramen. Th
 
 What this buys, beyond cost:
 
-- <b>Collectives on dedicated hardware.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. On Trainium3, Neuron Collectives runs them on 16 dedicated CC-Cores per chip, which direct the DMA engines that move the data, so collectives do not run on the NeuronCore compute engines.
+- <b>Collectives on dedicated hardware.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. On Trainium3, libnccom runs them on 16 dedicated CC-Cores per chip, which direct the DMA engines that move the data, so collectives do not run on the NeuronCore compute engines.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
 - <b>Large scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1.
 - <b>Performance per watt across generations.</b> The Trn3 UltraServer delivers 4x better performance per watt than the Trn2 UltraServer.
@@ -343,7 +343,7 @@ Domain size sets how far expert parallelism can spread on the fast fabric. Colle
 | --- | --- | --- | --- | --- |
 | NVIDIA rack-scale NVLink systems | One rack of GPUs | NVLink | NCCL on the SMs; in-switch reduction | RDMA |
 | AMD MI355X | One node of GPUs | Infinity Fabric | RCCL on the CUs | RDMA over Ethernet |
-| AWS Trn3 UltraServer (Gen2) | 144 chips: 36 servers × 4 Trainium3 chips, across racks | NeuronLink-v4 through NeuronSwitch-v1: 2,560 GB/s per chip (both directions): 1,024 GB/s within a server, 1,280 GB/s across servers in a rack, 256 GB/s across racks | Neuron collectives on dedicated CC-Cores | EFA, 57,600 Gb/s per UltraServer |
+| AWS Trn3 UltraServer (Gen2) | 144 chips: 36 servers × 4 Trainium3 chips, across racks | NeuronLink-v4 through NeuronSwitch-v1: 2,560 GB/s per chip (both directions): 1,024 GB/s within a server, 1,280 GB/s across servers in a rack, 256 GB/s across racks | libnccom on dedicated CC-Cores | EFA, 57,600 Gb/s per UltraServer |
 
 <b>The design bets:</b>
 
@@ -386,7 +386,7 @@ Interconnect bandwidth can matter more than another few hundred TFLOPS.
 
 A chip is only as fast as the code that runs on it, which is why the compiler and kernel stack matter as much as the silicon.
 
-<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v3.svg?v=2" alt="Software stacks from framework to hardware for NVIDIA, AMD, and AWS Trainium." loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v3.svg?v=3" alt="Software stacks from framework to hardware for NVIDIA, AMD, and AWS Trainium." loading="lazy"></figure>
 
 <b>Compilers and kernels.</b> Both platforms pair a compiler with hand-written kernels. A compiler fuses most of the graph (torch.compile on GPUs, the Neuron compiler on Trainium), and performance-critical operators are hand-tuned kernels (CUDA or Triton on GPUs, NKI on Trainium). The difference is scheduling: the Neuron compiler also plans every DMA transfer and engine instruction stream, work that GPU caches and warp schedulers partly absorb at run time:
 
@@ -669,5 +669,6 @@ Web pages accessed November 2026.
 32. vLLM Project. [GPT-OSS 120B 8K/1K disaggregated serving on Trn3](https://github.com/vllm-project/vllm-neuron/blob/main/docs/tutorials/tutorial-gpt-oss-120b-8k1k-trn3.md). GitHub.
 33. OpenAI. [gpt-oss-120b and gpt-oss-20b Model Card](https://cdn.openai.com/pdf/419b6906-9da6-406c-a19d-1bb078ac7637/oai_gpt-oss_model_card.pdf). 2025.
 34. LMSYS. [SGLang-Neuron v0.1.0: SGLang's Serving Stack on AWS Trainium](https://www.lmsys.org/blog/2026-11-12-sglang-neuron-v0.1.0). 2026.
+35. AWS Neuron. [NeuronX Runtime developer guide](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/neuron-runtime/guides/nrt-developer-guide.html).
 
 </div>
