@@ -211,7 +211,7 @@ Every value sits below the Trainium3 ridge point (513.67 FLOP/B). <b>At 8K conte
 
 ### How many conversations fit
 
-FP8 stores each of Llama 3.3 70B's 70.55 billion parameters in 8 bits, one byte, so the weights take 70.55 GB. The rest of the HBM holds the KV cache, minus the activation and runtime buffers the serving engine reserves, so the counts below are upper bounds. Decode activations themselves are small: one MLP intermediate for the 753 4K-token sequences one Trn3 server holds (below) is 753 × 28,672 × 2 bytes, 43.2 MB.
+FP8 stores each of Llama 3.3 70B's 70.55 billion parameters in 8 bits, one byte, so the weights take 70.55 GB. The rest of the HBM holds the KV cache, minus the activation and runtime buffers the serving engine reserves, so the counts below are upper bounds. Decode activations themselves are small: one MLP intermediate for the 816 4K-token sequences one Trn3 server holds (below) is 816 × 28,672 × 2 bytes, 46.8 MB.
 
 |  | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
