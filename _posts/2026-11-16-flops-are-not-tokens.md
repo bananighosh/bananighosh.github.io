@@ -215,7 +215,7 @@ FP8 stores each of Llama 3.3 70B's 70.55 billion parameters in 8 bits, one byte,
 
 |  | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
-| HBM | 20.7 TB (20,736 GiB) |
+| HBM | 20.7 TB |
 | HBM bandwidth | 705.6 TB/s |
 | HBM left for KV cache (36 copies of the weights) | 18,370.5 GiB |
 | 4K-token sequences that fit | 29,376 |
