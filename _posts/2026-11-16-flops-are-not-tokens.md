@@ -19,7 +19,7 @@ math: false
 
 Every accelerator spec sheet leads with peak FLOPS. A user sees tokens per second (TPS), and an operator pays per token. During decode, the phase that produces every output token after the first, each step re-reads the model weights and every conversation's KV cache from HBM. For long conversations, the math units wait on those bytes at any batch size. While decode stays memory-bound, doubling FLOPS at the same bandwidth leaves tokens per second unchanged.
 
-On AWS Trainium, an ASIC for training and inference, the path from FLOPS to tokens runs through the compute engines, on-chip data reuse, data movement, and chip-to-chip links.
+On every accelerator, the path from FLOPS to tokens runs through the compute engines, on-chip data reuse, data movement, and chip-to-chip links.
 
 <p>
 <b>The headline numbers do not show which of those components set tokens per second.</b> 
@@ -32,7 +32,7 @@ Model shape → workload shape → arithmetic intensity → bytes moved → ener
 → compute → communication → scheduling → latency / throughput / cost per token
 ```
 
-This post walks that chain once, with Trainium3 as the worked example, and names the limit at every link. By the end one can reason from first principles about where an ASIC gains, before looking at a benchmark.
+This post walks that chain once, with Trainium3 as the worked example, and shows what limits performance at each step. By the end one can reason from first principles about where an ASIC gains, before looking at a benchmark.
 
 <div class="pullquote" markdown="1">
 <b>The recurring theme:</b> do not optimize for the chip. Identify what prevents the chip from doing useful work, and remove that.
