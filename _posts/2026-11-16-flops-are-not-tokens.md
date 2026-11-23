@@ -1,6 +1,8 @@
 ---
 title: "FLOPS Are Not Tokens: A First-Principles Guide to ASICs for LLM Inference"
 summary: "Why peak FLOPS do not tell you which chip serves your model faster, and how memory, energy, kernels, compilers, networking, and workload shape actually decide inference performance."
+description: "Why peak FLOPS do not tell you which chip serves your model faster, and how memory, energy, kernels, compilers, networking, and workload shape actually decide inference performance."
+image: /assets/img/flops-are-not-tokens/social-card.png
 tags: [inference, gpu, asic, trainium]
 math: false
 ---
@@ -69,7 +71,7 @@ This post walks that chain once, with Trainium3 as the worked example, and shows
 
 A GPU is thousands of programmable workers sharing caches the hardware manages. An ASIC such as Trainium uses a few very large math engines fed by a scratchpad that software, the compiler or a custom kernel, fills ahead of time. Both are programmable. They differ in where the flexibility lives and who does the optimization work.
 
-<figure><img src="/assets/img/flops-are-not-tokens/hierarchy-v4.svg?v=2" alt="hierarchy v4" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/hierarchy-v4.svg?v=2" alt="Memory hierarchy of a GPU and of Trainium3: HBM, a hardware-managed cache or 128 software-managed DMA engines, on-chip SRAM, and the matrix and vector engines." loading="lazy"></figure>
 
 Both designs keep model weights and the KV cache in HBM and stage them into software-managed on-chip SRAM: shared memory on a GPU, SBUF on Trainium3. The difference is the path between HBM and that SRAM. A GPU also has a hardware-managed L2 cache and hardware warp schedulers, so irregular access patterns and changing shapes are absorbed by cache hits and by switching to another warp.
 
@@ -96,7 +98,7 @@ What this buys, beyond cost:
 - <b>Collectives on dedicated cores.</b> On GPUs, NCCL and RCCL run collectives by default as kernels on the same SMs or CUs as the math. Trainium3 ships dedicated CC-Cores on every chip.
 - <b>Software-managed on-chip memory for reuse.</b> Trainium3 has 8 × 32 MiB = 256 MiB of SBUF per chip, placed by the compiler or kernel rather than by a hardware cache.
 - <b>Large scale-up domains</b> (chips joined by the scale-up interconnect, before traffic leaves for the scale-out network). The larger the domain, the more of the tensor- and expert-parallel traffic that runs every layer stays on links with far more bandwidth per chip than the scale-out network. <b>Trn3 UltraServer:</b> 144 Trainium3 chips over NeuronLink-v4 through NeuronSwitch-v1.
-- <b>Tokens per watt across generations.</b> The Trn3 UltraServer delivers 4x better performance per watt than the Trn2 UltraServer.
+- <b>Performance per watt across generations.</b> The Trn3 UltraServer delivers 4x better performance per watt than the Trn2 UltraServer.
 
 ### The system is the building block
 
@@ -127,7 +129,7 @@ Trainium3 supports FP8, MXFP8, and MXFP4, with peak low-precision compute (MXFP8
 
 <b>Prefill</b> reads the whole prompt at once: lots of math, very parallel. <b>Decode</b> writes one token at a time: very little math per step, but every step re-reads the weights (only the active experts in a MoE model) and each sequence's KV cache.
 
-<figure><img src="/assets/img/flops-are-not-tokens/prefill-decode-v3.svg?v=2" alt="prefill decode v3" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/prefill-decode-v3.svg?v=2" alt="Prefill processes the whole prompt in large compute-bound matrix multiplies; decode generates one token per step and re-reads weights and KV cache every step." loading="lazy"></figure>
 
 <b>Deep dive: tensor shapes.</b>
 
@@ -202,12 +204,13 @@ B → ∞:        →  (2P + attention FLOPs)  /  KV_bytes_per_seq
 
 | Context | KV per sequence | Max decode arithmetic intensity at any batch |
 | --- | --- | --- |
-| 8K | 1.34 GB | 121.1 FLOP/B |
-| 32K | 5.37 GB | 42.3 FLOP/B |
-| 128K | 21.47 GB | 22.6 FLOP/B |
+| 4K | 0.671 GB | 226.27 FLOP/B |
+| 8K | 1.34 GB | 121.13 FLOP/B |
+| 32K | 5.37 GB | 42.28 FLOP/B |
+| 128K | 21.47 GB | 22.57 FLOP/B |
 | Limit (attention only, GQA-8, FP8 KV) | Grows with context | 16 FLOP/B |
 
-Every value sits below the Trainium3 ridge point (513.67 FLOP/B). <b>At 8K context and beyond, with FP8 weights and KV cache, this model's decode is memory-bound at any batch size, on Trainium3 as on any accelerator whose ridge point sits above these values.</b>
+Every value sits below the Trainium3 ridge point (513.67 FLOP/B). <b>At 4K context and beyond, with FP8 weights and KV cache, this model's decode is memory-bound at any batch size, on Trainium3 as on any accelerator whose ridge point sits above these values.</b>
 
 ### How many conversations fit
 
@@ -254,7 +257,7 @@ Bytes read per decode token (70.55 GB of FP8 weights):
 
 The 45 nm figures show the size of the gap between moving data and computing on it, not modern absolute values. At batch 1, decode does two FLOPs for every byte it pulls from HBM, so almost all of its energy goes to moving weights. Batching divides the weight bytes per token, which makes <b>batching an energy optimization, not only a throughput one</b>.
 
-Three levers cut energy per token: keep more data on chip, move fewer bits per value, and spend silicon and power on data movement.
+Three levers cut energy per token: keep more data on chip, move fewer bits per value, and spend silicon on cheaper data movement.
 
 ### Across the chips: energy strategy
 
@@ -278,7 +281,7 @@ Three levers cut energy per token: keep more data on chip, move fewer bits per v
 Matrix units work on fixed-size blocks. If the block has room for 128 rows and you bring 8, you still pay for 128 and get 8. This is a simplified padding model: real utilization also depends on operand orientation, instruction granularity, and how the kernel maps the GEMM onto the hardware.
 
 
-<figure><img src="/assets/img/flops-are-not-tokens/d4_tile_quantization.svg" alt="Tile quantization: decode batch 8 on a 128-row tile does 6.25% useful work; batch 129 drops back to 50.39% because one extra row costs a whole tile." loading="lazy"><figcaption>Tile quantization: decode batch 8 on a 128-row tile does 6.25% useful work; batch 129 drops back to 50.39% because one extra row costs a whole tile.</figcaption></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/d4_tile_quantization.svg?v=2" alt="Tile quantization: decode batch 8 on a 128-row tile does 6.25% useful work; batch 129 drops back to 50.39% because one extra row costs a whole tile." loading="lazy"><figcaption>Tile quantization: decode batch 8 on a 128-row tile does 6.25% useful work; batch 129 drops back to 50.39% because one extra row costs a whole tile.</figcaption></figure>
 
 ```txt
 Useful fraction = rows ÷ (ceil(rows ÷ tile) × tile)
@@ -287,7 +290,7 @@ batch 128, tile 128 → 100%
 batch 129, tile 128 → 50.39%   (one extra row costs a whole tile)
 ```
 
-The example is generic: on Trainium, which operand stays stationary in the 128×128 array is a choice the Neuron compiler or an NKI kernel makes for each matmul. Prefill fills tiles easily (batch × prompt rows). Decode at small batch wastes most of each tile, on top of being memory-bound. Utilization counters can look healthy while most of the work is padding. At small batch the bandwidth limit binds first; tile quantization starts to cost real throughput as batch grows toward the ridge.
+The example is generic: on Trainium, which operand stays stationary in the 128×128 array is a choice the Neuron compiler or an NKI kernel makes for each matmul. Prefill fills tiles easily (batch × prompt rows). Decode at small batch wastes most of each tile, on top of being memory-bound. Utilization counters can look healthy while most of the work is padding. At small batch the bandwidth limit is reached first; tile quantization starts to cost real throughput as batch grows toward the ridge.
 
 ### Across the chips: matrix unit granularity
 
@@ -309,7 +312,7 @@ The example is generic: on Trainium, which operand stays stationary in the 128×
 
 Large models span many chips, and chips must talk every layer. The <b>α–β model</b> gives the cost of each message: sending n bytes takes α + n ÷ β, where α is the fixed startup latency every message pays before any bytes flow and β is the link bandwidth. Small messages are dominated by α, large messages by n ÷ β.
 
-<figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-v4.svg" alt="scale hierarchy v4" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/scale-hierarchy-v4.svg" alt="Scale hierarchy: chip, scale-up domain over the fast interconnect, and scale-out network, with the parallelism that fits each level." loading="lazy"></figure>
 
 ```txt
 Message time = α (startup latency) + size ÷ β (bandwidth)
@@ -347,7 +350,6 @@ Domain size sets how far expert parallelism can spread on the fast fabric. Colle
 - <b>NVIDIA</b> joins a rack of GPUs over NVLink, and the switches perform part of each reduction themselves, so collectives spend less time on the GPUs.
 - <b>AMD</b> joins the GPUs in a node over Infinity Fabric, and expert parallelism beyond the node runs over the RDMA Ethernet scale-out network.
 - <b>Trainium3 UltraServer</b> keeps 144 chips in one NeuronLink-v4 domain through NeuronSwitch-v1: 2,560 GB/s per chip, 1,280 GB/s of it across servers in a rack. Expert parallelism stays on NeuronLink without touching the scale-out network. Dedicated CC-Cores run the collectives, so collectives do not occupy the compute engines.
-- <b>Jalapeño</b> joins its chips in rack-scale Ethernet domains.
 
 ### Design: GPT-OSS 120B expert parallelism on Trn3
 
@@ -384,7 +386,7 @@ Interconnect bandwidth can matter more than another few hundred TFLOPS.
 
 A chip is only as fast as the code that runs on it, which is why the compiler and kernel stack matter as much as the silicon.
 
-<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v3.svg?v=2" alt="software stacks v3" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/software-stacks-v3.svg?v=2" alt="Software stacks from framework to hardware for NVIDIA, AMD, and AWS Trainium." loading="lazy"></figure>
 
 <b>Compilers and kernels.</b> Both platforms pair a compiler with hand-written kernels. A compiler fuses most of the graph (torch.compile on GPUs, the Neuron compiler on Trainium), and performance-critical operators are hand-tuned kernels (CUDA or Triton on GPUs, NKI on Trainium). The difference is scheduling: the Neuron compiler also plans every DMA transfer and engine instruction stream, work that GPU caches and warp schedulers partly absorb at run time:
 
@@ -459,7 +461,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 <b>D. Mixture of Experts.</b> Each layer adds two all-to-alls, and the busiest device sets the pace. A large scale-up domain keeps that traffic off the scale-out network: the GPT-OSS 120B deployment in Section 7 keeps it inside one Trn3 instance.
 
-<figure><img src="/assets/img/flops-are-not-tokens/moe-layer-v2.svg" alt="moe layer v2" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/moe-layer-v2.svg" alt="One MoE layer: router, all-to-all dispatch to experts, expert compute, and all-to-all combine." loading="lazy"></figure>
 
 <b>E. Speculative decoding.</b> A small draft proposes K tokens and the target model verifies them in one pass, turning 1-row decode into (K+1)-row decode: higher arithmetic intensity, fuller tiles. If each draft token is accepted with probability p, one verification step emits (1 − p^(K+1)) ÷ (1 − p) tokens on average, so the gain grows with p and with how cheap the draft is. Gains shrink at high batch because batching already used the spare compute, so the best K falls as batch size rises.
 
@@ -486,7 +488,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 Prefill wants compute. Decode wants bandwidth, KV capacity, and energy efficiency. Running both on the same chip can make each stall the other. Split them into two pools, and let each pool use the hardware that fits its job.
 
-<figure><img src="/assets/img/flops-are-not-tokens/diagram4-pd-disaggregation.svg?v=2" alt="diagram4 pd disaggregation" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/diagram4-pd-disaggregation.svg?v=2" alt="Prefill-decode disaggregation: a prefill pool and a decode pool, with the KV cache transferred between them." loading="lazy"></figure>
 
 TTFT and TPOT get separate targets and separate tuning. And each pool can be sized for its own stage: FLOPS per dollar for prefill, HBM bandwidth per dollar for decode.
 
@@ -527,7 +529,7 @@ Memory check (Little's law)
 Link check             λ · P · KV bytes per token ≤ link bandwidth
 ```
 
-<figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v4.svg?v=2" alt="capacity planning v4" loading="lazy"></figure>
+<figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v4.svg?v=2" alt="Capacity planning: requests flow through a prefill pool sized by FLOPS per dollar and a decode pool sized by HBM bandwidth per dollar." loading="lazy"></figure>
 
 <figure class="embed"><iframe class="embed-frame" data-embed="fleet-sizer" src="/assets/embeds/fleet-sizer.html?v=2" title="Prefill/Decode Fleet Sizer" loading="lazy"></iframe></figure>
 
@@ -580,7 +582,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
 
-<b>Takeaway:</b> cost per token is driven by software (speculative decoding, PD disaggregation, kernel quality), $/chip-hr, HBM bandwidth, the scale-up domain (MoE), low-precision dense throughput (prefill), and peak FLOPS. The relative importance of these factors depends on the workload and its bottleneck, and peak FLOPS is rarely the binding one. Count only tokens served within your TTFT and TPOT targets (goodput): a system that makes more tokens but misses the SLO costs more per useful token.
+<b>Takeaway:</b> cost per token is driven by software (speculative decoding, PD disaggregation, kernel quality), $/chip-hr, HBM bandwidth, the scale-up domain (MoE), low-precision dense throughput (prefill), and peak FLOPS. The relative importance of these factors depends on the workload and its bottleneck, and peak FLOPS is rarely the limiting one. Count only tokens served within your TTFT and TPOT targets (goodput): a system that makes more tokens but misses the SLO costs more per useful token.
 
 </div>
 
@@ -601,7 +603,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 | --- | --- | --- |
 | Long prompts, short answers (RAG, summarization) | Prefill compute | Achievable FP8 or FP4 FLOPS per dollar |
 | Short prompts, long answers (reasoning, agents) | Decode memory bandwidth | HBM bandwidth per dollar and per watt |
-| Long context | KV capacity | HBM capacity per system |
+| Long context | KV capacity | HBM capacity per dollar or per watt |
 | MoE | All-to-all latency, imbalance | Scale-up domain size and collective latency |
 | Strict per-user latency | Minimum time per token | Measured TPOT at your batch |
 | Research, fast-changing models | Kernel availability | Kernel and framework coverage for your models |
@@ -667,6 +669,5 @@ Web pages accessed November 2026.
 32. vLLM Project. [GPT-OSS 120B 8K/1K disaggregated serving on Trn3](https://github.com/vllm-project/vllm-neuron/blob/main/docs/tutorials/tutorial-gpt-oss-120b-8k1k-trn3.md). GitHub.
 33. OpenAI. [gpt-oss-120b and gpt-oss-20b Model Card](https://cdn.openai.com/pdf/419b6906-9da6-406c-a19d-1bb078ac7637/oai_gpt-oss_model_card.pdf). 2025.
 34. LMSYS. [SGLang-Neuron v0.1.0: SGLang's Serving Stack on AWS Trainium](https://www.lmsys.org/blog/2026-11-12-sglang-neuron-v0.1.0). 2026.
-35. OpenAI. [OpenAI and Broadcom: Jalapeño](https://openai.com/index/openai-broadcom-jalapeno-inference-chip/). 2026.
 
 </div>
