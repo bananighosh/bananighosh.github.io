@@ -165,8 +165,10 @@ Minimum time per decode step on one Trn3 server = 70.55 GB of weights ÷ 19.6 TB
 |  | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
 | One copy of the weights | One Trn3 server: 4 chips, 576 GiB of HBM, 19.6 TB/s |
-| Minimum time per token | 3.60 ms |
-| Max tokens/s for one user | 277.8 |
+| Minimum time per token, one Trn3 server | 3.60 ms |
+| Minimum time per token, one Trn3 instance (16 chips, 78.4 TB/s) | 0.90 ms |
+| Max tokens/s for one user, one Trn3 server | 277.8 |
+| Max tokens/s for one user, one Trn3 instance | 1,111.2 |
 | Ridge point | 513.67 FLOP/B |
 | Weight-only ridge-point batch | 257 |
 | Copies of the weights per UltraServer | 36 |
@@ -453,7 +455,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 
 ## 10. Five workload scenarios
 
-<b>A. Large-batch prefill.</b> Compute-bound. Achievable dense low-precision FLOPS and long-sequence attention kernels decide. Dense FLOPS per dollar and per system set the cost.
+<b>A. Large-batch prefill.</b> Compute-bound. Achievable dense low-precision FLOPS and long-sequence attention kernels decide. Dense FLOPS per dollar and per watt set the cost.
 
 <b>B. Small-batch, latency-first decode.</b> Memory-bound, with kernel launch overhead on top. HBM bandwidth, quantization, static graphs, and speculative decoding decide. Look at measured TPOT, not specs.
 
@@ -470,7 +472,7 @@ Every optimization removes one specific bottleneck. Diagnose first, then pick.
 | Scenario | AWS Trn3 Gen2 UltraServer |
 | --- | --- |
 | A. Prefill | 362.45 PF of peak low-precision compute (MXFP8/MXFP4) |
-| B. Low-latency decode | 3.60 ms minimum per token (Section 3) |
+| B. Low-latency decode | 0.90 ms minimum per token on one Trn3 instance (Section 3) |
 | C. Long context | 20.7 TB of HBM; 3,672 conversations at 32K |
 | D. MoE | One 144-chip NeuronLink-v4 domain; collectives on dedicated CC-Cores |
 | E. Speculative decoding | EAGLE3 in vLLM Neuron |
@@ -577,7 +579,7 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 
 <b>AWS Trainium3: cost per token.</b> Decode cost tracks the price of HBM bandwidth (Section 12), and the Trn3 Gen2 UltraServer delivers 705.6 TB/s of HBM bandwidth per system. Anthropic, Karakuri, Metagenomi, NetoAI, Ricoh, and Splash Music report up to 50% lower training and inference costs on Trainium, and on Amazon Bedrock, Trainium3 delivers up to 3x faster performance than Trainium2. At scale, Anthropic's Project Rainier runs on nearly 500,000 Trainium2 chips.
 
-<b>What favors ASICs.</b> In a MoE model, expert parallelism runs an all-to-all every layer, so the scale-up domain shapes cost per token (Section 7). Trainium builds that domain large: 144 chips on one NeuronLink-v4 domain in the Trn3 Gen2 UltraServer.
+<b>What favors ASICs.</b> In a MoE model, expert parallelism runs an all-to-all every layer, so the scale-up domain shapes cost per token (Section 7). Trainium builds that domain large: 144 chips on one NeuronLink-v4 domain in the Trn3 Gen2 UltraServer. That domain lets wide expert parallelism (wide EP), with experts spread across many chips, run without touching the scale-out network. In SemiAnalysis's AgentX agentic inference benchmark, the first Trn3 UltraServer submission, serving GLM-5.2/5.3 (744B, FP4) on vLLM, demonstrated 2.28x better performance per dollar than GB300 NVL72, B300, and MI355X, measured as total tokens per dollar of TCO at matched P90 interactivity, a result SemiAnalysis attributes to wide EP (InferenceX official preview).
 
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
@@ -670,5 +672,7 @@ Web pages accessed November 2026.
 33. OpenAI. [gpt-oss-120b and gpt-oss-20b Model Card](https://cdn.openai.com/pdf/419b6906-9da6-406c-a19d-1bb078ac7637/oai_gpt-oss_model_card.pdf). 2025.
 34. LMSYS. [SGLang-Neuron v0.1.0: SGLang's Serving Stack on AWS Trainium](https://www.lmsys.org/blog/2026-11-12-sglang-neuron-v0.1.0). 2026.
 35. AWS Neuron. [NeuronX Runtime developer guide](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/neuron-runtime/guides/nrt-developer-guide.html).
+36. SemiAnalysis. [Trainium3 UltraServer results on the AgentX agentic inference benchmark](https://x.com/SemiAnalysis_/status/2125658708357128703). 2026.
+37. SemiAnalysis InferenceX. [GLM-5.2/5.3 744B agentic results dashboard](https://inferencex.semianalysis.com/infx/inference/glm-5-3). 2026.
 
 </div>
