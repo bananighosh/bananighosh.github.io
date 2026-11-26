@@ -533,7 +533,7 @@ Link check             λ · P · KV bytes per token ≤ link bandwidth
 
 <figure><img src="/assets/img/flops-are-not-tokens/capacity-planning-v4.svg?v=2" alt="Capacity planning: requests flow through a prefill pool sized by FLOPS per dollar and a decode pool sized by HBM bandwidth per dollar." loading="lazy"></figure>
 
-<figure class="embed"><iframe class="embed-frame" data-embed="fleet-sizer" src="/assets/embeds/fleet-sizer.html?v=2" title="Prefill/Decode Fleet Sizer" loading="lazy"></iframe></figure>
+<figure class="embed"><iframe class="embed-frame" data-embed="fleet-sizer" src="/assets/embeds/fleet-sizer.html?v=3" title="Prefill/Decode Fleet Sizer" loading="lazy"></iframe></figure>
 
 
 <b>The shape of the traffic sets the fleet.</b> Two published InferenceX sequence shapes, and real multi-turn chat traffic:
