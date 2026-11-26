@@ -72,7 +72,7 @@ footer{font-size:12px;color:var(--muted);max-width:80ch}
     <h1>Prefill/Decode Fleet Sizer</h1>
     <p class="lede">Size each pool from demand, not 50/50. Enter your traffic and the throughput you measured per node; the sizer applies the capacity-planning formulas and Little's law from the post.</p>
   </header>
-  <p class="note">Defaults are roofline ceilings for one Trn3 server (4 Trainium3 chips: 576 GiB HBM, 19.6 TB/s, 10.068 PF peak low-precision compute (MXFP8/MXFP4)) serving Llama 3.3 70B in FP8. Enter your measured throughput to size your own deployment.</p>
+  <p class="note">Defaults represent theoretical roofline upper bounds for one Trn3 server (4 Trainium3 chips: 576 GiB HBM, 19.6 TB/s memory bandwidth, and 10.068 PF peak low-precision compute using MXFP8/MXFP4), using Llama 3.3 70B in FP8 as the reference workload. Actual throughput depends on workload characteristics, model implementation, and system-level optimizations. Enter your own measured values for workload-specific capacity planning.</p>
 
   <div class="grid">
     <section class="panel" aria-label="Inputs">
