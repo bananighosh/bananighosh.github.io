@@ -62,7 +62,7 @@ Coursework in High Performance Machine Learning, Computing Systems and Architect
 
 ## Talks and awards
 
-- Speaker, Grace Hopper Celebration: Mining Broken User Journeys for Faster Crash Resolution (2017)
+- Speaker, Grace Hopper Celebration (GHC): Mining Broken User Journeys for Faster Crash Resolution (2017)
 - Poster presenter, AI meets Science, New York: GenAI-powered therapeutic analysis (2024)
 - Hardware winner, AMD Pervasive AI Developer Contest (2024)
 - Winner, Adobe Summer Hackathon: on-premise GenAI chat assistant (2023)
