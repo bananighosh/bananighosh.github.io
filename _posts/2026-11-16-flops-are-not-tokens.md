@@ -581,6 +581,9 @@ In decode-heavy serving, most of the cost is decode, which is bound by HBM bandw
 
 <b>What favors ASICs.</b> In a MoE model, expert parallelism runs an all-to-all every MoE layer, so the scale-up domain shapes cost per token (Section 7). Trainium builds that domain large: 144 chips on one NeuronLink-v4 domain in the Trn3 Gen2 UltraServer. That domain lets wide expert parallelism (wide EP), with experts spread across many chips, run without touching the scale-out network. In SemiAnalysis's AgentX agentic inference benchmark, the first Trn3 UltraServer submission, serving GLM-5.2 and GLM-5.3 (744B, FP4) on vLLM, demonstrated up to 2.28x better performance per dollar than the compared GPU configurations, measured as total tokens per dollar of TCO at matched P90 interactivity, a result SemiAnalysis attributes to wide EP (InferenceX official preview).
 
+<blockquote class="twitter-tweet" data-dnt="true" align="center"><a href="https://x.com/vllm_project/status/2125828172323401754"></a></blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
 <div class="callout callout-green" markdown="1">
 <span class="callout-icon">🛠️</span>
 
