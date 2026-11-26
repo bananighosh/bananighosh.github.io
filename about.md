@@ -16,7 +16,7 @@ permalink: /about/
 
 I like making ML systems fast. I work on distributed training and inference performance for AWS Trainium (Trn3 and Trn4). In vLLM, I added kernel auto-tuning that sped up a GPU inference path by up to 2.46x on NVIDIA B200, and I am building adaptive-k speculative decoding for MoE models. Before Trainium, I optimized agentic execution graphs serving 500K+ users at Amazon Quick, reducing model invocations and tail latency, and earlier I was a seasoned engineer at Adobe building large-scale distributed systems.
 
-<p class="profile-links"><a href="https://github.com/bananighosh">GitHub</a> · <a href="https://www.linkedin.com/in/banani-ghosh/">LinkedIn</a></p>
+<p class="profile-links"><a href="https://github.com/bananighosh">GitHub</a> · <a href="https://www.linkedin.com/in/banani-ghosh/">LinkedIn</a> · <a href="https://x.com/banani2421">X</a></p>
 
 ## Work
 
